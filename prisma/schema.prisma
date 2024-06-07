@@ -20,8 +20,9 @@ model User {
   email      String   @unique
   name       String?
   password   String
-  role       Role @default(USER)
+  role       Role     @default(USER)
   active     Boolean
+  order      Order[]
 
   @@map("users")
 }
@@ -35,9 +36,12 @@ model Order {
   total_price   Int
   prices        PriceDetail?
 
-  order_status        OrderStatus  @default(PENDING)
-  email_status        NotificationStatus  @default(NOT_SENT)
-  telegram_status     NotificationStatus  @default(NOT_SENT)
+  order_status    OrderStatus        @default(PENDING)
+  email_status    NotificationStatus @default(NOT_SENT)
+  telegram_status NotificationStatus @default(NOT_SENT)
+
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id])
 
   @@map("orders")
 }
