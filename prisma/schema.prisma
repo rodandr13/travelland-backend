@@ -21,52 +21,55 @@ model User {
   name       String?
   password   String
   role       Role     @default(USER)
-  active     Boolean
-  order      Order[]
+  is_active  Boolean  @default(true)
+  orders     Order[]
 
   @@map("users")
 }
 
 model Order {
-  id            String       @id @default(cuid())
-  created_at    DateTime     @default(now())
-  excursion_id  String
-  selected_date DateTime
-  time          String
-  total_price   Int
-  prices        PriceDetail?
+  id         String   @id @default(cuid()) @db.Uuid
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   order_status    OrderStatus        @default(PENDING)
-  email_status    NotificationStatus @default(NOT_SENT)
-  telegram_status NotificationStatus @default(NOT_SENT)
+  email_status    NotificationStatus
+  telegram_status NotificationStatus
+  payment_status  PaymentStatus
+  payment_method  PaymentMethod
+  promocode       String?
+  order_services  OrderService[]
 
-  user_id String
+  user_id String @db.Uuid
   user    User   @relation(fields: [user_id], references: [id])
 
   @@map("orders")
 }
 
-model PriceDetail {
-  id          String  @id @default(cuid())
-  prices      Price[] @relation("prices")
-  base_prices Price[] @relation("base_prices")
-  order_id    String  @unique
-  order       Order   @relation(fields: [order_id], references: [id])
+model OrderService {
+  id             Int            @id @default(autoincrement())
+  service_id     String
+  service_type   String
+  date           DateTime
+  time           String
+  service_prices ServicePrice[]
 
-  @@map("price_details")
+  order_id String @db.Uuid
+  order    Order  @relation(fields: [order_id], references: [id])
+
+  @@map("order_services")
 }
 
-model Price {
-  id                   String      @id @default(cuid())
-  price                Int
-  title                String
-  description          String
-  price_detail_id      String
-  base_price_detail_id String
-  price_detail         PriceDetail @relation(fields: [price_detail_id], references: [id], name: "prices")
-  price_detailBase     PriceDetail @relation(fields: [base_price_detail_id], references: [id], name: "base_prices")
+model ServicePrice {
+  id           Int    @id @default(autoincrement())
+  price_type   String
+  base_price   Int
+  actual_price Int
 
-  @@map("prices")
+  order_service_id Int
+  order_service    OrderService @relation(fields: [order_service_id], references: [id])
+
+  @@map("service_prices")
 }
 
 enum Role {
@@ -79,10 +82,27 @@ enum OrderStatus {
   CONFIRMED
   CANCELLED
   COMPLETED
+  PROCESSING
+  RETURNED
 }
 
 enum NotificationStatus {
-  NOT_SENT
-  SENT
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  CANCELLED
+  COMPLETED
   FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  INSTALLMENT_PAYMENT
 }
