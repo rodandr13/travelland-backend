@@ -32,13 +32,13 @@ model Order {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  order_status    OrderStatus        @default(PENDING)
-  email_status    NotificationStatus
-  telegram_status NotificationStatus
-  payment_status  PaymentStatus
-  payment_method  PaymentMethod
-  promocode       String?
-  order_services  OrderService[]
+  order_status       OrderStatus        @default(PENDING)
+  email_status       NotificationStatus
+  telegram_status    NotificationStatus
+  payment_status     PaymentStatus
+  payment_method     PaymentMethod
+  promo_code         String?
+  order_reservations OrderReservation[]
 
   user_id String @db.Uuid
   user    User   @relation(fields: [user_id], references: [id])
@@ -46,30 +46,31 @@ model Order {
   @@map("orders")
 }
 
-model OrderService {
+model OrderReservation {
   id             Int            @id @default(autoincrement())
-  service_id     String
-  service_type   String
+  reservation_id     String
+  reservation_type   String
   date           DateTime
   time           String
-  service_prices ServicePrice[]
+  reservation_prices ReservationPrice[]
 
   order_id String @db.Uuid
   order    Order  @relation(fields: [order_id], references: [id])
 
-  @@map("order_services")
+  @@map("order_reservations")
 }
 
-model ServicePrice {
-  id           Int    @id @default(autoincrement())
-  price_type   String
-  base_price   Int
-  actual_price Int
+model ReservationPrice {
+  id             Int    @id @default(autoincrement())
+  price_type     String
+  base_price     Int
+  actual_price   Int
+  amount_persons Int
 
-  order_service_id Int
-  order_service    OrderService @relation(fields: [order_service_id], references: [id])
+  order_reservation_id Int
+  order_reservation    OrderReservation @relation(fields: [order_reservation_id], references: [id])
 
-  @@map("service_prices")
+  @@map("reservation_prices")
 }
 
 enum Role {
