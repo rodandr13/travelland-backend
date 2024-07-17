@@ -1,35 +1,30 @@
 import { Type } from 'class-transformer';
 import {
-  IsArray,
-  IsDateString,
   IsNotEmpty,
+  IsOptional,
   IsString,
-  IsUUID,
   ValidateNested,
 } from 'class-validator';
 
-import { PersonCountDto } from './person-count.dto';
+import { ReservationDto } from './reservation.dto';
+import { UserDto } from './user.dto';
 
 export class CreateOrderDto {
   @IsNotEmpty()
-  @IsUUID()
-  user_id: string;
+  @ValidateNested()
+  @Type(() => UserDto)
+  user: UserDto;
+
+  @IsString()
+  @IsOptional()
+  promoCode?: string;
 
   @IsNotEmpty()
   @IsString()
-  excursion_id: string;
+  paymentMethod: string;
 
   @IsNotEmpty()
-  @IsDateString()
-  selected_date: string;
-
-  @IsNotEmpty()
-  @IsString()
-  time: string;
-
-  @IsNotEmpty()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => PersonCountDto)
-  person_count: PersonCountDto[];
+  @ValidateNested()
+  @Type(() => ReservationDto)
+  reservations: ReservationDto[];
 }

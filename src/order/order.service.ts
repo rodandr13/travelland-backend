@@ -8,15 +8,15 @@ import { PrismaService } from '../prisma/prisma.service';
 export class OrderService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(createOrderDto: CreateOrderDto) {
-    return this.prisma.order.create({
-      data: {
-        id: uuidv4(),
-        user_id: createOrderDto.user_id,
-        excursion_id: createOrderDto.excursion_id,
-        selected_date: new Date(createOrderDto.selected_date),
-        time: createOrderDto.time,
-      },
-    });
-  }
+  // async create(createOrderDto: CreateOrderDto) {
+  //   return this.prisma.order.create({
+  //     data: {
+  //       id: uuidv4(),
+  //       user_id: createOrderDto.user_id,
+  //       excursion_id: createOrderDto.excursion_id,
+  //       selected_date: new Date(createOrderDto.selected_date),
+  //       time: createOrderDto.time,
+  //     },
+  //   });
+  // }
 }
