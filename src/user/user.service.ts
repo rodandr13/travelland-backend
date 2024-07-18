@@ -19,7 +19,7 @@ export class UserService {
         email,
         password: hashedPassword,
         role: 'USER',
-        active: true,
+        is_active: true,
         created_at: new Date(),
         updated_at: new Date(),
       },

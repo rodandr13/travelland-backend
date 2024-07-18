@@ -47,11 +47,11 @@ model Order {
 }
 
 model OrderReservation {
-  id             Int            @id @default(autoincrement())
+  id                 Int                @id @default(autoincrement())
   reservation_id     String
   reservation_type   String
-  date           DateTime
-  time           String
+  date               DateTime
+  time               String
   reservation_prices ReservationPrice[]
 
   order_id String @db.Uuid
@@ -64,7 +64,7 @@ model ReservationPrice {
   id             Int    @id @default(autoincrement())
   price_type     String
   base_price     Int
-  actual_price   Int
+  current_price  Int
   amount_persons Int
 
   order_reservation_id Int
