@@ -1,6 +1,6 @@
 import { IsInt, IsNotEmpty, IsString } from 'class-validator';
 
-export class ParticipantDto {
+export class ParticipantDTO {
   @IsNotEmpty()
   @IsString()
   category: string;
@@ -8,4 +8,12 @@ export class ParticipantDto {
   @IsNotEmpty()
   @IsInt()
   count: number;
+
+  @IsNotEmpty()
+  @IsInt()
+  basePrice: number;
+
+  @IsNotEmpty()
+  @IsInt()
+  currentPrice: number;
 }

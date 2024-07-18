@@ -1,13 +1,16 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsNotEmpty, ValidateNested } from 'class-validator';
+import { IsArray, ValidateNested, IsNotEmpty, IsString } from 'class-validator';
 
-import { BookingDto } from './booking.dto';
-import { ParticipantDto } from './participant.dto';
+import { BookingDTO } from './booking.dto';
+import { ParticipantDTO } from './participant.dto';
 
-export class ExcursionDto extends BookingDto {
-  @IsNotEmpty()
+export class ExcursionDto extends BookingDTO {
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ParticipantDto)
-  participant: ParticipantDto[];
+  @Type(() => ParticipantDTO)
+  participants: ParticipantDTO[];
+
+  @IsNotEmpty()
+  @IsString()
+  __type: string = 'excursion';
 }

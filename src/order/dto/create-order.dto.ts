@@ -1,19 +1,21 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsNotEmpty,
   IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
 
-import { ReservationDto } from './reservation.dto';
-import { UserDto } from './user.dto';
+import { BookingDTO } from './booking.dto';
+import { ExcursionDto } from './excursion.dto';
+import { UserDTO } from './user.dto';
 
-export class CreateOrderDto {
+export class CreateOrderDTO {
   @IsNotEmpty()
   @ValidateNested()
-  @Type(() => UserDto)
-  user: UserDto;
+  @Type(() => UserDTO)
+  user: UserDTO;
 
   @IsString()
   @IsOptional()
@@ -23,8 +25,14 @@ export class CreateOrderDto {
   @IsString()
   paymentMethod: string;
 
-  @IsNotEmpty()
-  @ValidateNested()
-  @Type(() => ReservationDto)
-  reservations: ReservationDto[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BookingDTO, {
+    discriminator: {
+      property: '__type',
+      subTypes: [{ value: ExcursionDto, name: 'excursion' }],
+    },
+    keepDiscriminatorProperty: true,
+  })
+  reservations: ExcursionDto[];
 }

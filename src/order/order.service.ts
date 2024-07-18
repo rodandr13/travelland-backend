@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 
-import { CreateOrderDto } from './dto/create-order.dto';
+import { CreateOrderDTO } from './dto/create-order.dto';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()

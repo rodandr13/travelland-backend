@@ -1,21 +1,16 @@
 import { Type } from 'class-transformer';
 import { IsArray, ValidateNested } from 'class-validator';
 
-import { BookingDto } from './booking.dto';
+import { BookingDTO } from './booking.dto';
 import { ExcursionDto } from './excursion.dto';
 
-export class ReservationDto {
+export class ReservationDTO {
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => BookingDto, {
+  @Type(() => BookingDTO, {
     discriminator: {
       property: '__type',
-      subTypes: [
-        {
-          value: ExcursionDto,
-          name: 'excursion',
-        },
-      ],
+      subTypes: [{ value: ExcursionDto, name: 'excursion' }],
     },
     keepDiscriminatorProperty: true,
   })

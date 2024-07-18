@@ -1,6 +1,6 @@
 import { IsDateString, IsNotEmpty, IsString } from 'class-validator';
 
-export class BookingDto {
+export abstract class BookingDTO {
   @IsNotEmpty()
   @IsString()
   id: string;
