@@ -48,7 +48,7 @@ model Order {
 
 model OrderReservation {
   id                 Int                @id @default(autoincrement())
-  reservation_id     String
+  reservation_id     String             @db.Uuid
   reservation_type   String
   date               DateTime
   time               String
