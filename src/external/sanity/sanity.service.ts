@@ -18,4 +18,18 @@ export class SanityService {
   async fetchData(query: string, params = {}) {
     return await this.client.fetch(query, params);
   }
+
+  async getExcursionPrices(id: string) {
+    // 7d667969-dfcd-42a5-836b-cc25319508ab
+    const query = `
+    *[_id == $id]{
+   "basePrices": prices[]{price, "id": category->{_id}._id, "title":category->{title[_key == "ru"]}.title[0].value, "description":category->{description[_key == "ru"]}.description[0].value},
+  "promotionalPrices": promotionalPrices[]{weekdays, title, dates, "prices": prices[]{price, "title":category->{title[_key == "ru"]}.title[0].value, "description":category->{description[_key == "ru"]}.description[0].value}}[dates.dateFrom <= now() && dates.dateTo >= now()],
+  "priceCorrections": priceCorrections[]{weekdays, title, dates, "prices": prices[]{price, "title":category->{title[_key == "ru"]}.title[0].value, "description":category->{description[_key == "ru"]}.description[0].value}}[dates.dateFrom <= now() && dates.dateTo >= now()],
+}[0]`;
+
+    const {basePrices, promotionalPrices, priceCorrections} = await this.client.fetch(query, { id: id });
+    console.log(basePrices, promotionalPrices, priceCorrections)
+    return 'prices';
+  }
 }

@@ -8,12 +8,4 @@ export class ParticipantDTO {
   @IsNotEmpty()
   @IsInt()
   count: number;
-
-  @IsNotEmpty()
-  @IsInt()
-  basePrice: number;
-
-  @IsNotEmpty()
-  @IsInt()
-  currentPrice: number;
 }

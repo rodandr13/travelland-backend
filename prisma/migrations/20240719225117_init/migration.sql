@@ -15,7 +15,7 @@ CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'CARD', 'INSTALLMENT_PAYMENT');
 
 -- CreateTable
 CREATE TABLE "users" (
-    "id" UUID NOT NULL,
+    "id" SERIAL NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "email" TEXT NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE "users" (
 
 -- CreateTable
 CREATE TABLE "orders" (
-    "id" UUID NOT NULL,
+    "id" SERIAL NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "order_status" "OrderStatus" NOT NULL DEFAULT 'PENDING',
@@ -37,33 +37,34 @@ CREATE TABLE "orders" (
     "telegram_status" "NotificationStatus" NOT NULL,
     "payment_status" "PaymentStatus" NOT NULL,
     "payment_method" "PaymentMethod" NOT NULL,
-    "promocode" TEXT,
-    "user_id" UUID NOT NULL,
+    "promo_code" TEXT,
+    "user_id" INTEGER NOT NULL,
 
     CONSTRAINT "orders_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "order_services" (
+CREATE TABLE "order_reservations" (
     "id" SERIAL NOT NULL,
-    "service_id" TEXT NOT NULL,
-    "service_type" TEXT NOT NULL,
+    "reservation_id" TEXT NOT NULL,
+    "reservation_type" TEXT NOT NULL,
     "date" TIMESTAMP(3) NOT NULL,
     "time" TEXT NOT NULL,
-    "order_id" UUID NOT NULL,
+    "order_id" INTEGER NOT NULL,
 
-    CONSTRAINT "order_services_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "order_reservations_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "service_prices" (
+CREATE TABLE "reservation_prices" (
     "id" SERIAL NOT NULL,
     "price_type" TEXT NOT NULL,
     "base_price" INTEGER NOT NULL,
-    "actual_price" INTEGER NOT NULL,
-    "order_service_id" INTEGER NOT NULL,
+    "current_price" INTEGER NOT NULL,
+    "amount_persons" INTEGER NOT NULL,
+    "order_reservation_id" INTEGER NOT NULL,
 
-    CONSTRAINT "service_prices_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "reservation_prices_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -73,7 +74,7 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 ALTER TABLE "orders" ADD CONSTRAINT "orders_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "order_services" ADD CONSTRAINT "order_services_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "order_reservations" ADD CONSTRAINT "order_reservations_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "service_prices" ADD CONSTRAINT "service_prices_order_service_id_fkey" FOREIGN KEY ("order_service_id") REFERENCES "order_services"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "reservation_prices" ADD CONSTRAINT "reservation_prices_order_reservation_id_fkey" FOREIGN KEY ("order_reservation_id") REFERENCES "order_reservations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

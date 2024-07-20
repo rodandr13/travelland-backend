@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { v4 as uuidv4 } from 'uuid';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -15,7 +14,6 @@ export class UserService {
 
     return this.prisma.user.create({
       data: {
-        id: uuidv4(),
         email,
         password: hashedPassword,
         role: 'USER',
@@ -26,7 +24,7 @@ export class UserService {
     });
   }
 
-  getById(id: string) {
+  getById(id: number) {
     return this.prisma.user.findUnique({
       where: {
         id,

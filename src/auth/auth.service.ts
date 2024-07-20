@@ -49,7 +49,7 @@ export class AuthService {
     };
   }
 
-  private issueTokens(userId: string) {
+  private issueTokens(userId: number) {
     const data = { id: userId };
     const accessToken = this.jwt.sign(data, {
       expiresIn: '1d',

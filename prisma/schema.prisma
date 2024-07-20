@@ -14,7 +14,7 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(cuid()) @db.Uuid
+  id         Int      @id @default(autoincrement())
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   email      String   @unique
@@ -28,7 +28,7 @@ model User {
 }
 
 model Order {
-  id         String   @id @default(cuid()) @db.Uuid
+  id         Int      @id @default(autoincrement())
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
@@ -40,22 +40,22 @@ model Order {
   promo_code         String?
   order_reservations OrderReservation[]
 
-  user_id String @db.Uuid
-  user    User   @relation(fields: [user_id], references: [id])
+  user_id Int
+  user    User @relation(fields: [user_id], references: [id])
 
   @@map("orders")
 }
 
 model OrderReservation {
   id                 Int                @id @default(autoincrement())
-  reservation_id     String             @db.Uuid
+  reservation_id     String
   reservation_type   String
   date               DateTime
   time               String
   reservation_prices ReservationPrice[]
 
-  order_id String @db.Uuid
-  order    Order  @relation(fields: [order_id], references: [id])
+  order_id Int
+  order    Order @relation(fields: [order_id], references: [id])
 
   @@map("order_reservations")
 }

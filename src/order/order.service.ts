@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PaymentMethod } from '@prisma/client';
-import { v4 as uuidv4 } from 'uuid';
 
 import { CreateOrderDTO } from './dto/create-order.dto';
+import { SanityService } from '../external/sanity/sanity.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserService } from '../user/user.service';
 
@@ -11,11 +11,12 @@ export class OrderService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly userService: UserService,
+    private readonly sanityService: SanityService,
   ) {}
 
   async createOrder(createOrderDTO: CreateOrderDTO) {
     const { user, reservations, promoCode, paymentMethod } = createOrderDTO;
-
+    
     let existingUser = await this.userService.getByEmail(user.email);
 
     if (!existingUser) {
@@ -30,7 +31,6 @@ export class OrderService {
 
     return this.prisma.order.create({
       data: {
-        id: uuidv4(),
         user_id: existingUser.id,
         payment_method: paymentMethodEnum,
         promo_code: promoCode?.toUpperCase(),
@@ -47,8 +47,8 @@ export class OrderService {
             reservation_prices: {
               create: reservation.participants.map((participant) => ({
                 price_type: participant.category,
-                base_price: participant.basePrice,
-                current_price: participant.currentPrice,
+                base_price: 11,
+                current_price: 11,
                 amount_persons: participant.count,
               })),
             },
