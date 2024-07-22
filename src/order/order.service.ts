@@ -16,7 +16,13 @@ export class OrderService {
 
   async createOrder(createOrderDTO: CreateOrderDTO) {
     const { user, reservations, promoCode, paymentMethod } = createOrderDTO;
-    
+
+    const prices = await this.sanityService.getExcursionPrices(
+      '8871f68c-5594-4e11-a87f-e04df493a732',
+      '2024-07-21',
+    );
+
+    console.log(prices);
     let existingUser = await this.userService.getByEmail(user.email);
 
     if (!existingUser) {
