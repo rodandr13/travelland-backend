@@ -17,12 +17,6 @@ export class OrderService {
   async createOrder(createOrderDTO: CreateOrderDTO) {
     const { user, reservations, promoCode, paymentMethod } = createOrderDTO;
 
-    const prices = await this.sanityService.getExcursionPrices(
-      '8871f68c-5594-4e11-a87f-e04df493a732',
-      '2024-07-21',
-    );
-
-    console.log(prices);
     let existingUser = await this.userService.getByEmail(user.email);
 
     if (!existingUser) {
@@ -34,7 +28,6 @@ export class OrderService {
 
     const paymentMethodEnum =
       PaymentMethod[paymentMethod.toUpperCase() as keyof typeof PaymentMethod];
-
     return this.prisma.order.create({
       data: {
         user_id: existingUser.id,
@@ -45,20 +38,33 @@ export class OrderService {
         telegram_status: 'PENDING',
         payment_status: 'PENDING',
         order_reservations: {
-          create: reservations.map((reservation) => ({
-            reservation_id: reservation.id,
-            reservation_type: reservation.__type,
-            date: new Date(reservation.date).toISOString(),
-            time: reservation.time,
-            reservation_prices: {
-              create: reservation.participants.map((participant) => ({
-                price_type: participant.category,
-                base_price: 11,
-                current_price: 11,
-                amount_persons: participant.count,
-              })),
-            },
-          })),
+          create: await Promise.all(
+            reservations.map(async (reservation) => {
+              const { basePrices, currentPrices } =
+                await this.sanityService.getExcursionPrices(
+                  reservation.id,
+                  reservation.date,
+                );
+              return {
+                reservation_id: reservation.id,
+                reservation_type: reservation.__type,
+                date: new Date(reservation.date).toISOString(),
+                time: reservation.time,
+                reservation_prices: {
+                  create: reservation.participants.map((participant) => ({
+                    price_type: participant.category,
+                    base_price: basePrices.find(
+                      (price) => participant.category === price.categoryId,
+                    ).price,
+                    current_price: currentPrices.find(
+                      (price) => participant.category === price.categoryId,
+                    ).price,
+                    amount_persons: participant.count,
+                  })),
+                },
+              };
+            }),
+          ),
         },
       },
     });
