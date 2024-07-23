@@ -16,8 +16,8 @@ export class UserService {
       data: {
         email,
         password: hashedPassword,
-        role: 'USER',
         is_active: true,
+        role_id: 0,
         created_at: new Date(),
         updated_at: new Date(),
       },

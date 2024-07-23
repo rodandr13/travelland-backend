@@ -20,11 +20,44 @@ model User {
   email      String   @unique
   name       String?
   password   String
-  role       Role     @default(USER)
   is_active  Boolean  @default(true)
   orders     Order[]
 
+  role_id Int
+  role    Role @relation(fields: [role_id], references: [id])
+
   @@map("users")
+}
+
+model Role {
+  id             Int              @id @default(autoincrement())
+  name           String           @unique
+  description    String?
+  user           User[]
+  RolePermission RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id               Int              @id @default(autoincrement())
+  name             String           @unique
+  description      String?
+  role_permissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id Int @id @default(autoincrement())
+
+  role_id Int
+  role    Role @relation(fields: [role_id], references: [id])
+
+  permission_id Int
+  permission    Permission @relation(fields: [permission_id], references: [id])
+
+  @@map("role_permissions")
 }
 
 model Order {
@@ -63,19 +96,14 @@ model OrderReservation {
 model ReservationPrice {
   id             Int    @id @default(autoincrement())
   price_type     String
-  base_price     Int
-  current_price  Int
+  base_price     Float
+  current_price  Float
   amount_persons Int
 
   order_reservation_id Int
   order_reservation    OrderReservation @relation(fields: [order_reservation_id], references: [id])
 
   @@map("reservation_prices")
-}
-
-enum Role {
-  USER
-  ADMIN
 }
 
 enum OrderStatus {

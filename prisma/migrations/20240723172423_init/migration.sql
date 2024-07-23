@@ -1,7 +1,4 @@
 -- CreateEnum
-CREATE TYPE "Role" AS ENUM ('USER', 'ADMIN');
-
--- CreateEnum
 CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'PROCESSING', 'RETURNED');
 
 -- CreateEnum
@@ -21,10 +18,37 @@ CREATE TABLE "users" (
     "email" TEXT NOT NULL,
     "name" TEXT,
     "password" TEXT NOT NULL,
-    "role" "Role" NOT NULL DEFAULT 'USER',
     "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "role_id" INTEGER NOT NULL,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "roles" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+
+    CONSTRAINT "roles_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "permissions" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+
+    CONSTRAINT "permissions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "role_permissions" (
+    "id" SERIAL NOT NULL,
+    "role_id" INTEGER NOT NULL,
+    "permission_id" INTEGER NOT NULL,
+
+    CONSTRAINT "role_permissions_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -59,8 +83,8 @@ CREATE TABLE "order_reservations" (
 CREATE TABLE "reservation_prices" (
     "id" SERIAL NOT NULL,
     "price_type" TEXT NOT NULL,
-    "base_price" INTEGER NOT NULL,
-    "current_price" INTEGER NOT NULL,
+    "base_price" DOUBLE PRECISION NOT NULL,
+    "current_price" DOUBLE PRECISION NOT NULL,
     "amount_persons" INTEGER NOT NULL,
     "order_reservation_id" INTEGER NOT NULL,
 
@@ -69,6 +93,21 @@ CREATE TABLE "reservation_prices" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "roles_name_key" ON "roles"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "permissions_name_key" ON "permissions"("name");
+
+-- AddForeignKey
+ALTER TABLE "users" ADD CONSTRAINT "users_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_permission_id_fkey" FOREIGN KEY ("permission_id") REFERENCES "permissions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "orders" ADD CONSTRAINT "orders_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
