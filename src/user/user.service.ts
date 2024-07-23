@@ -17,7 +17,7 @@ export class UserService {
         email,
         password: hashedPassword,
         is_active: true,
-        role_id: 0,
+        role_id: 2,
         created_at: new Date(),
         updated_at: new Date(),
       },
