@@ -8,6 +8,7 @@ import { ExternalModule } from './external/external.module';
 import { OrderModule } from './order/order.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UserModule } from './user/user.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { UserModule } from './user/user.module';
     PrismaModule,
     OrderModule,
     ExternalModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

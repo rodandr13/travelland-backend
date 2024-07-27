@@ -3,6 +3,7 @@ import { PaymentMethod } from '@prisma/client';
 
 import { CreateOrderDTO } from './dto/create-order.dto';
 import { SanityService } from '../external/sanity/sanity.service';
+import { NotificationService } from '../notification/notification.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserService } from '../user/user.service';
 
@@ -12,6 +13,7 @@ export class OrderService {
     private readonly prisma: PrismaService,
     private readonly userService: UserService,
     private readonly sanityService: SanityService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async createOrder(createOrderDTO: CreateOrderDTO) {
@@ -28,7 +30,8 @@ export class OrderService {
 
     const paymentMethodEnum =
       PaymentMethod[paymentMethod.toUpperCase() as keyof typeof PaymentMethod];
-    return this.prisma.order.create({
+
+    const order = await this.prisma.order.create({
       data: {
         user_id: existingUser.id,
         payment_method: paymentMethodEnum,
@@ -68,5 +71,11 @@ export class OrderService {
         },
       },
     });
+
+    await this.notificationService.sendOrderNotification(
+      '318657667',
+      createOrderDTO,
+    );
+    return order;
   }
 }

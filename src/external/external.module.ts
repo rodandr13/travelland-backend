@@ -7,6 +7,6 @@ import { TelegramService } from './telegram/telegram.service';
 @Module({
   imports: [ConfigModule],
   providers: [SanityService, TelegramService],
-  exports: [SanityService],
+  exports: [SanityService, TelegramService],
 })
 export class ExternalModule {}

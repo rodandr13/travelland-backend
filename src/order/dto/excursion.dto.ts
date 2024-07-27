@@ -10,6 +10,9 @@ export class ExcursionDto extends BookingDTO {
   @Type(() => ParticipantDTO)
   participants: ParticipantDTO[];
 
+  @IsString()
+  title: string;
+
   @IsNotEmpty()
   @IsString()
   __type: string = 'excursion';

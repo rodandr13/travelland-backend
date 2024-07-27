@@ -5,6 +5,9 @@ export class ParticipantDTO {
   @IsString()
   category: string;
 
+  @IsString()
+  title: string;
+
   @IsNotEmpty()
   @IsInt()
   count: number;
