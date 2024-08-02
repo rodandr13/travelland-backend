@@ -1,5 +1,7 @@
 import { IsDateString, IsNotEmpty, IsString } from 'class-validator';
 
+import { IsActualDate } from '../../../common/validators/is-actual-date.validator';
+
 export abstract class BookingDTO {
   @IsNotEmpty()
   @IsString()
@@ -7,6 +9,7 @@ export abstract class BookingDTO {
 
   @IsNotEmpty()
   @IsDateString()
+  @IsActualDate()
   date: string;
 
   @IsNotEmpty()
