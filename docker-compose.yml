@@ -1,0 +1,35 @@
+name: traventico
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres-container
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+  nest:
+    build: .
+    container_name: nest-app-container
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      SANITY_PROJECT_ID: ${SANITY_PROJECT_ID}
+      SANITY_DATASET: ${SANITY_DATASET}
+      SANITY_API_VERSION: ${SANITY_API_VERSION}
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
+    ports:
+      - "4000:4000"
+    depends_on:
+      - postgres
+    command: >
+      sh -c "npx prisma migrate deploy &&
+            node dist/prisma/seed.js &&
+             node dist/src/main.js"
+
+volumes:
+  postgres_data:
