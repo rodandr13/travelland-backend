@@ -1,19 +1,9 @@
 name: traventico
 
 services:
-  postgres:
-    image: postgres:16
-    container_name: postgres-container
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+
   nest:
-    build: .
+    image: andr13/traventico-backend-new:latest
     container_name: nest-app-container
     environment:
       DATABASE_URL: ${DATABASE_URL}
@@ -22,14 +12,27 @@ services:
       SANITY_DATASET: ${SANITY_DATASET}
       SANITY_API_VERSION: ${SANITY_API_VERSION}
       TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
+      POSTGRESQL_HOST: ${POSTGRESQL_HOST}
+      POSTGRESQL_PORT: ${POSTGRESQL_PORT}
+      POSTGRESQL_USER: ${POSTGRESQL_USER}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRESQL_DBNAME: ${POSTGRESQL_DBNAME}
+      DATABASE_SCHEMA: ${DATABASE_SCHEMA}
     ports:
       - "4000:4000"
-    depends_on:
-      - postgres
     command: >
       sh -c "npx prisma migrate deploy &&
             node dist/prisma/seed.js &&
              node dist/src/main.js"
 
-volumes:
-  postgres_data:
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-container
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - nest
