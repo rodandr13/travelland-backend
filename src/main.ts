@@ -2,6 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import * as cookieParser from 'cookie-parser';
 
+import { TokenInterceptor } from './interceptors/token.interceptor';
 import { AppModule } from './modules/app.module';
 
 async function bootstrap() {
@@ -16,6 +17,7 @@ async function bootstrap() {
       forbidUnknownValues: true,
     }),
   );
+  app.useGlobalInterceptors(new TokenInterceptor());
   app.enableCors({
     origin: ['http://localhost:3000'],
   });
