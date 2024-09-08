@@ -52,10 +52,10 @@ export class AuthService {
   private issueTokens(userId: number) {
     const data = { id: userId };
     const accessToken = this.jwt.sign(data, {
-      expiresIn: '1d',
+      expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '1d',
     });
     const refreshToken = this.jwt.sign(data, {
-      expiresIn: '7d',
+      expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
     });
 
     return { accessToken, refreshToken };
@@ -84,31 +84,36 @@ export class AuthService {
 
     res.cookie(this.REFRESH_TOKEN_NAME, refreshToken, {
       httpOnly: true,
-      domain: 'localhost',
+      domain: process.env.COOKIE_DOMAIN || 'localhost',
       expires: expireIn,
-      secure: true,
-      sameSite: 'none',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'none',
     });
   }
 
   removeRefreshTokenFromResponse(res: Response) {
     res.cookie(this.REFRESH_TOKEN_NAME, '', {
       httpOnly: true,
-      domain: 'localhost',
+      domain: process.env.COOKIE_DOMAIN || 'localhost',
       expires: new Date(0),
-      secure: true,
-      sameSite: 'none',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'none',
     });
   }
 
   async getNewToken(refreshToken: string) {
-    const result = await this.jwt.verifyAsync(refreshToken);
-    if (!result) {
+    let result;
+    try {
+      result = await this.jwt.verifyAsync(refreshToken);
+    } catch (error) {
       throw new UnauthorizedException('Недействительный refresh токен');
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...user } = await this.userService.getById(result.id);
+    const user = await this.userService.getById(result.id);
+    if (!user) {
+      throw new UnauthorizedException('Пользователь не найден');
+    }
+
     const tokens = this.issueTokens(user.id);
 
     return {

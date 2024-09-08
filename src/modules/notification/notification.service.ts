@@ -28,8 +28,7 @@ export class NotificationService {
     });
 
     orderMessage += `\n*Promo Code:* ${orderDTO.promoCode || 'N/A'}\n`;
-    orderMessage += `*Payment Method:* ${orderDTO.paymentMethod}\n`;
-
+    orderMessage += `*Payment Method:* ${orderDTO.paymentMethod.replace(/[_*[\]()~`>#+-=|{}.!]/g, '\\$&')}\n`;
     await this.telegramService.sendMessage(chatId, orderMessage, {
       parse_mode: 'Markdown',
     });

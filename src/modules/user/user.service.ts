@@ -1,4 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 import { CreateUserDto } from './dto/create-user.dto';
@@ -10,7 +15,13 @@ export class UserService {
 
   async create(createUserDto: CreateUserDto) {
     const { email, password } = createUserDto;
-    const hashedPassword = await this.hashPassword(password);
+    const hashedPassword = await this.encryptPassword(password);
+
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) throw new ConflictException('User already exists');
 
     return this.prisma.user.create({
       data: {
@@ -18,13 +29,11 @@ export class UserService {
         password: hashedPassword,
         is_active: true,
         role_id: 2,
-        created_at: new Date(),
-        updated_at: new Date(),
       },
     });
   }
 
-  getById(id: number) {
+  getById(id: number): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: {
         id,
@@ -32,16 +41,21 @@ export class UserService {
     });
   }
 
-  getByEmail(email: string) {
-    return this.prisma.user.findUnique({
+  getByEmail(email: string): Promise<User> {
+    const user = this.prisma.user.findUnique({
       where: {
         email,
       },
     });
+
+    if (!user)
+      throw new NotFoundException(`User with email ${email} not found`);
+
+    return user;
   }
 
-  async hashPassword(password: string): Promise<string> {
+  async encryptPassword(password: string): Promise<string> {
     const saltRounds = 10;
-    return await bcrypt.hash(password, saltRounds);
+    return bcrypt.hash(password, saltRounds);
   }
 }
