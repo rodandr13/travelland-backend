@@ -38,8 +38,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('login/access-token')
   async getNewToken(@Req() req: Request) {
-    const refreshTokenFromCookie =
-      req.cookies[this.authService.REFRESH_TOKEN_NAME];
+    const refreshTokenFromCookie = req.cookies['refreshToken'];
 
     if (!refreshTokenFromCookie) {
       throw new UnauthorizedException('Refresh токен не действителен');
