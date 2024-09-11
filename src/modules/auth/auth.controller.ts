@@ -5,10 +5,11 @@ import {
   HttpStatus,
   Post,
   Req,
+  Res,
   UnauthorizedException,
   UseInterceptors,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 
 import { AuthService } from './auth.service';
 import { AuthDto } from './dto/auth.dto';
@@ -31,7 +32,20 @@ export class AuthController {
   }
 
   @Post('logout')
-  async logout() {
+  async logout(@Res() response: Response) {
+    response.clearCookie('accessToken', {
+      httpOnly: true,
+      domain: process.env.COOKIE_DOMAIN || 'localhost',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'none',
+    });
+
+    response.clearCookie('refreshToken', {
+      httpOnly: true,
+      domain: process.env.COOKIE_DOMAIN || 'localhost',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'none',
+    });
     return { message: 'Logged out successfully' };
   }
 

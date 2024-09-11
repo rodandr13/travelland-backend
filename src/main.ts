@@ -20,6 +20,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new TokenInterceptor());
   app.enableCors({
     origin: ['http://localhost:3000'],
+    credentials: true,
   });
   await app.listen(4000);
 }

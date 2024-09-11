@@ -4,7 +4,7 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
@@ -13,34 +13,35 @@ export class TokenInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const ctx = context.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
 
     return next.handle().pipe(
       tap((data) => {
-        if (request.url.includes('logout')) {
-          response.clearCookie('refreshToken', {
+        const { refreshToken, accessToken } = data;
+        if (refreshToken && accessToken) {
+          const expireAccess = new Date();
+          expireAccess.setMinutes(expireAccess.getMinutes() + 15);
+
+          const expireRefresh = new Date();
+          expireRefresh.setDate(expireRefresh.getDate() + 7);
+
+          response.cookie('accessToken', accessToken, {
             httpOnly: true,
             domain: process.env.COOKIE_DOMAIN || 'localhost',
+            expires: expireAccess,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'none',
           });
-          return;
-        }
-
-        const { refreshToken } = data;
-        if (refreshToken) {
-          const expireIn = new Date();
-          expireIn.setDate(expireIn.getDate() + 1);
 
           response.cookie('refreshToken', refreshToken, {
             httpOnly: true,
             domain: process.env.COOKIE_DOMAIN || 'localhost',
-            expires: expireIn,
+            expires: expireRefresh,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'none',
           });
 
           delete data.refreshToken;
+          delete data.accessToken;
         }
       }),
     );
