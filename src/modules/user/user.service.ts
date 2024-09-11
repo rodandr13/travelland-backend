@@ -33,10 +33,14 @@ export class UserService {
     });
   }
 
-  getById(id: number): Promise<User | null> {
+  getById(id: number): Promise<any> {
     return this.prisma.user.findUnique({
       where: {
         id,
+      },
+      select: {
+        id: true,
+        email: true,
       },
     });
   }

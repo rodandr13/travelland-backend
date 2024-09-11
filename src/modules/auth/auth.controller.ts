@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -9,26 +10,45 @@ import {
   UnauthorizedException,
   UseInterceptors,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Request, Response } from 'express';
 
 import { AuthService } from './auth.service';
 import { AuthDto } from './dto/auth.dto';
 import { TokenInterceptor } from '../../interceptors/token.interceptor';
+import { UserService } from '../user/user.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly jwtService: JwtService,
+    private readonly userService: UserService,
+  ) {}
 
   @UseInterceptors(TokenInterceptor)
   @Post('login')
   async login(@Body() dto: AuthDto) {
-    return this.authService.login(dto);
+    return await this.authService.login(dto);
+  }
+
+  @Get('me')
+  async getMe(@Req() req: Request) {
+    const accessToken = req.cookies['accessToken'];
+    console.log(req);
+    if (!accessToken) {
+      throw new UnauthorizedException('Необходима авторизация');
+    }
+
+    const userId = this.jwtService.verify(accessToken).id;
+
+    return await this.userService.getById(userId);
   }
 
   @UseInterceptors(TokenInterceptor)
   @Post('register')
   async register(@Body() dto: AuthDto) {
-    return this.authService.register(dto);
+    return await this.authService.register(dto);
   }
 
   @Post('logout')

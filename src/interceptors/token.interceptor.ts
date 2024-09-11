@@ -29,7 +29,7 @@ export class TokenInterceptor implements NestInterceptor {
             domain: process.env.COOKIE_DOMAIN || 'localhost',
             expires: expireAccess,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'none',
+            sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
           });
 
           response.cookie('refreshToken', refreshToken, {
@@ -37,7 +37,7 @@ export class TokenInterceptor implements NestInterceptor {
             domain: process.env.COOKIE_DOMAIN || 'localhost',
             expires: expireRefresh,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'none',
+            sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
           });
 
           delete data.refreshToken;

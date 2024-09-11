@@ -23,7 +23,6 @@ export class AuthService {
     const tokens = this.issueTokens(user.id);
 
     return {
-      user,
       ...tokens,
     };
   }
@@ -40,7 +39,6 @@ export class AuthService {
     const tokens = this.issueTokens(user.id);
 
     return {
-      user,
       ...tokens,
     };
   }
