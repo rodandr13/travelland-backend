@@ -2,8 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  HttpCode,
-  HttpStatus,
   Post,
   Req,
   Res,
@@ -35,45 +33,64 @@ export class AuthController {
   @Get('me')
   async getMe(@Req() req: Request) {
     const accessToken = req.cookies['accessToken'];
-    console.log(req);
+
     if (!accessToken) {
       throw new UnauthorizedException('Необходима авторизация');
     }
 
-    const userId = this.jwtService.verify(accessToken).id;
-
-    return await this.userService.getById(userId);
+    try {
+      const userId = this.jwtService.verify(accessToken).id;
+      // Возвращаем данные пользователя
+      const user = await this.userService.getById(userId);
+      return user;
+    } catch (error: any) {
+      // Если токен недействителен или истёк
+      if (error.name === 'TokenExpiredError') {
+        throw new UnauthorizedException('Срок действия токена истёк');
+      } else if (error.name === 'JsonWebTokenError') {
+        throw new UnauthorizedException('Недействительный токен');
+      }
+      // Для других ошибок
+      throw new UnauthorizedException('Ошибка авторизации');
+    }
   }
 
   @UseInterceptors(TokenInterceptor)
   @Post('register')
   async register(@Body() dto: AuthDto) {
+    console.log('ВЫЗВАНА РЕГИСТАРЦИЯ');
     return await this.authService.register(dto);
   }
 
   @Post('logout')
   async logout(@Res() response: Response) {
+    console.log('logout');
+
     response.clearCookie('accessToken', {
       httpOnly: true,
+      path: '/',
       domain: process.env.COOKIE_DOMAIN || 'localhost',
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'none',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      expires: new Date(0),
     });
 
     response.clearCookie('refreshToken', {
       httpOnly: true,
+      path: '/',
       domain: process.env.COOKIE_DOMAIN || 'localhost',
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'none',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      expires: new Date(0),
     });
-    return { message: 'Logged out successfully' };
+
+    // Явно возвращаем ответ с завершением запроса
+    return response.status(200).json({ message: 'Logged out successfully' });
   }
 
-  @HttpCode(HttpStatus.OK)
-  @Post('login/access-token')
+  @Post('refresh')
   async getNewToken(@Req() req: Request) {
     const refreshTokenFromCookie = req.cookies['refreshToken'];
-
     if (!refreshTokenFromCookie) {
       throw new UnauthorizedException('Refresh токен не действителен');
     }

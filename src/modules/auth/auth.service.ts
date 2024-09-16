@@ -84,11 +84,9 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Пользователь не найден');
     }
-
     const tokens = this.issueTokens(user.id);
 
     return {
-      user,
       ...tokens,
     };
   }
