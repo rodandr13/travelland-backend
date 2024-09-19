@@ -58,14 +58,16 @@ export class SanityService {
       const categoryId = basePrice.categoryId;
 
       let currentPrice = null;
-      for (const promo of promotionalPrices) {
-        const isDayIncluded = promo.weekdays.includes(getDayOfWeek(date));
-        if (!isDayIncluded) continue;
-        currentPrice = findPrice(categoryId, promo.prices);
-        if (currentPrice) break;
+      if (promotionalPrices && promotionalPrices.length > 0) {
+        for (const promo of promotionalPrices) {
+          const isDayIncluded = promo.weekdays.includes(getDayOfWeek(date));
+          if (!isDayIncluded) continue;
+          currentPrice = findPrice(categoryId, promo.prices);
+          if (currentPrice) break;
+        }
       }
 
-      if (!currentPrice) {
+      if (!currentPrice && priceCorrections && priceCorrections.length > 0) {
         for (const correction of priceCorrections) {
           const isDayIncluded = correction.weekdays.includes(
             getDayOfWeek(date),

@@ -29,7 +29,7 @@ export class CreateOrderDTO {
   @ValidateNested({ each: true })
   @Type(() => BookingDTO, {
     discriminator: {
-      property: '__type',
+      property: 'type',
       subTypes: [{ value: ExcursionDto, name: 'excursion' }],
     },
     keepDiscriminatorProperty: true,

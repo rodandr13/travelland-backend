@@ -83,8 +83,12 @@ model OrderReservation {
   id                 Int                @id @default(autoincrement())
   reservation_id     String
   reservation_type   String
+  reservation_title  String             @default("Unknown Title")
   date               DateTime
   time               String
+  slug               String?
+  image_src          String?
+  image_lqip         String?
   reservation_prices ReservationPrice[]
 
   order_id Int
@@ -99,6 +103,7 @@ model ReservationPrice {
   base_price     Float
   current_price  Float
   amount_persons Int
+  category_title String @default("Unknown Title")
 
   order_reservation_id Int
   order_reservation    OrderReservation @relation(fields: [order_reservation_id], references: [id])

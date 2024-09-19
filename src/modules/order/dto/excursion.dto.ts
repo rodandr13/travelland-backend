@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsArray, ValidateNested, IsNotEmpty, IsString } from 'class-validator';
+import { IsArray, IsNotEmpty, IsString, ValidateNested } from 'class-validator';
 
 import { BookingDTO } from './booking.dto';
 import { ParticipantDTO } from './participant.dto';
@@ -13,7 +13,16 @@ export class ExcursionDto extends BookingDTO {
   @IsString()
   title: string;
 
+  @IsString()
+  slug: string;
+
+  @IsString()
+  image_src: string;
+
+  @IsString()
+  image_lqip: string;
+
   @IsNotEmpty()
   @IsString()
-  __type: string = 'excursion';
+  type: string = 'excursion';
 }

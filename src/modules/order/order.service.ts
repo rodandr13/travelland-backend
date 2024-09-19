@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PaymentMethod } from '@prisma/client';
+import { Order, PaymentMethod } from '@prisma/client';
 
 import { CreateOrderDTO } from './dto/create-order.dto';
 import { SanityService } from '../external/sanity/sanity.service';
@@ -15,6 +15,64 @@ export class OrderService {
     private readonly sanityService: SanityService,
     private readonly notificationService: NotificationService,
   ) {}
+
+  async getUserOrders(userId: number): Promise<Order[]> {
+    const orders = await this.prisma.order.findMany({
+      where: {
+        user_id: userId,
+      },
+      include: {
+        order_reservations: {
+          include: {
+            reservation_prices: true,
+          },
+        },
+      },
+    });
+
+    return orders.map((order) => {
+      const reservationsWithTotals = order.order_reservations.map(
+        (reservation) => {
+          const reservationTotalCurrentPrice =
+            reservation.reservation_prices.reduce((sum, price) => {
+              return sum + price.current_price * price.amount_persons;
+            }, 0);
+
+          const reservationTotalBasePrice =
+            reservation.reservation_prices.reduce((sum, price) => {
+              return sum + price.base_price * price.amount_persons;
+            }, 0);
+
+          return {
+            ...reservation,
+            reservationTotalCurrentPrice,
+            reservationTotalBasePrice,
+          };
+        },
+      );
+
+      const orderTotalCurrentPrice = reservationsWithTotals.reduce(
+        (sum, reservation) => {
+          return sum + reservation.reservationTotalCurrentPrice;
+        },
+        0,
+      );
+
+      const orderTotalBasePrice = reservationsWithTotals.reduce(
+        (sum, reservation) => {
+          return sum + reservation.reservationTotalBasePrice;
+        },
+        0,
+      );
+
+      return {
+        ...order,
+        orderTotalCurrentPrice,
+        orderTotalBasePrice,
+        order_reservations: reservationsWithTotals,
+      };
+    });
+  }
 
   async createOrder(createOrderDTO: CreateOrderDTO) {
     const { user, reservations, promoCode, paymentMethod } = createOrderDTO;
@@ -50,11 +108,16 @@ export class OrderService {
                 );
               return {
                 reservation_id: reservation.id,
-                reservation_type: reservation.__type,
+                reservation_title: reservation.title,
+                slug: reservation.slug,
+                image_src: reservation.image_src,
+                image_lqip: reservation.image_lqip,
+                reservation_type: reservation.type,
                 date: new Date(reservation.date).toISOString(),
                 time: reservation.time,
                 reservation_prices: {
                   create: reservation.participants.map((participant) => ({
+                    category_title: participant.title,
                     price_type: participant.category,
                     base_price: basePrices.find(
                       (price) => participant.category === price.categoryId,
