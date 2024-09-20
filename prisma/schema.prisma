@@ -14,33 +14,60 @@ datasource db {
 }
 
 model User {
-  id         Int      @id @default(autoincrement())
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  email      String   @unique
-  name       String?
-  password   String
-  is_active  Boolean  @default(true)
-  orders     Order[]
+  id            Int       @id @default(autoincrement())
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  last_login    DateTime?
+  email         String    @unique
+  first_name    String?
+  last_name     String?
+  phone_number  String?
+  date_of_birth DateTime?
+  password_hash String
+  is_active     Boolean   @default(true)
+  is_admin      Boolean   @default(false)
+  access_token  String?
+  refresh_token String?
 
-  role_id Int
-  role    Role @relation(fields: [role_id], references: [id])
+  orders                  Order[]
+  roles                   UserRole[]
+  order_histories         OrderHistory[]
+  order_histories_changed OrderHistory[] @relation("OrderHistoryChangedBy")
 
   @@map("users")
 }
 
+model UserRole {
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user_id Int
+  user    User @relation(fields: [user_id], references: [id])
+
+  role_id Int
+  role    Role @relation(fields: [role_id], references: [id])
+
+  @@id([user_id, role_id])
+  @@map("user_roles")
+}
+
 model Role {
-  id             Int              @id @default(autoincrement())
-  name           String           @unique
-  description    String?
-  user           User[]
-  RolePermission RolePermission[]
+  id          Int      @id @default(autoincrement())
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  name        RoleName @unique
+  description String?
+
+  users            UserRole[]
+  role_permissions RolePermission[]
 
   @@map("roles")
 }
 
 model Permission {
   id               Int              @id @default(autoincrement())
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
   name             String           @unique
   description      String?
   role_permissions RolePermission[]
@@ -49,7 +76,8 @@ model Permission {
 }
 
 model RolePermission {
-  id Int @id @default(autoincrement())
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   role_id Int
   role    Role @relation(fields: [role_id], references: [id])
@@ -57,58 +85,154 @@ model RolePermission {
   permission_id Int
   permission    Permission @relation(fields: [permission_id], references: [id])
 
+  @@id([role_id, permission_id])
   @@map("role_permissions")
 }
 
 model Order {
-  id         Int      @id @default(autoincrement())
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  id           Int       @id @default(autoincrement())
+  order_number String    @unique
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+  confirmed_at DateTime?
+  paid_at      DateTime?
+  cancelled_at DateTime?
+  completed_at DateTime?
 
-  order_status       OrderStatus        @default(PENDING)
-  email_status       NotificationStatus
-  telegram_status    NotificationStatus
-  payment_status     PaymentStatus
-  payment_method     PaymentMethod
-  promo_code         String?
-  order_reservations OrderReservation[]
+  order_status    OrderStatus        @default(PENDING)
+  email_status    NotificationStatus
+  telegram_status NotificationStatus
+  payment_status  PaymentStatus      @default(UNPAID)
+  payment_method  PaymentMethod?
+
+  cancellation_reason String?
+  comments            String?
+
+  total_amount    Decimal
+  paid_amount     Decimal
+  discount_amount Decimal
+  currency        Currency  @default(EUR)
+  due_date        DateTime?
 
   user_id Int
   user    User @relation(fields: [user_id], references: [id])
 
+  promo_code_id String?
+  promo_code    PromoCode? @relation(fields: [promo_code_id], references: [code])
+
+  order_items     OrderItem[]
+  payments        Payment[]
+  order_histories OrderHistory[]
+
+  @@index([order_status])
+  @@index([payment_status])
+  @@index([user_id])
   @@map("orders")
 }
 
-model OrderReservation {
-  id                 Int                @id @default(autoincrement())
-  reservation_id     String
-  reservation_type   String
-  reservation_title  String             @default("Unknown Title")
-  date               DateTime
-  time               String
-  slug               String?
-  image_src          String?
-  image_lqip         String?
-  reservation_prices ReservationPrice[]
+model OrderItem {
+  id             Int              @id @default(autoincrement())
+  created_at     DateTime         @default(now())
+  updated_at     DateTime         @updatedAt
+  service_id     Int
+  service_type   ServiceType
+  service_title  String
+  date           DateTime
+  time           String
+  slug           String?
+  image_src      String?
+  image_lqip     String?
+  service_prices OrderItemPrice[]
+
+  provider_name String?
+  provider_id   Int?
 
   order_id Int
   order    Order @relation(fields: [order_id], references: [id])
 
-  @@map("order_reservations")
+  service Service? @relation(fields: [service_id], references: [id])
+
+  @@map("order_items")
 }
 
-model ReservationPrice {
-  id             Int    @id @default(autoincrement())
+model OrderHistory {
+  id         Int      @id @default(autoincrement())
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  order_id   Int
+  order      Order    @relation(fields: [order_id], references: [id])
+
+  status          OrderStatus
+  changed_at      DateTime    @default(now())
+  changed_by      Int
+  changed_by_user User        @relation("OrderHistoryChangedBy", fields: [changed_by], references: [id])
+  modified_by     User?       @relation(fields: [userId], references: [id])
+  userId          Int?
+
+  @@map("order_histories")
+}
+
+model OrderItemPrice {
+  id             Int      @id @default(autoincrement())
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
   price_type     String
-  base_price     Float
-  current_price  Float
-  amount_persons Int
-  category_title String @default("Unknown Title")
+  base_price     Decimal
+  current_price  Decimal
+  quantity       Int
+  category_title String
 
-  order_reservation_id Int
-  order_reservation    OrderReservation @relation(fields: [order_reservation_id], references: [id])
+  total_price Decimal
 
-  @@map("reservation_prices")
+  order_item_id Int
+  order_item    OrderItem @relation(fields: [order_item_id], references: [id])
+
+  @@map("order_item_prices")
+}
+
+model Service {
+  id          Int         @id @default(autoincrement())
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+  title       String
+  description String?
+  type        ServiceType
+
+  order_items OrderItem[]
+
+  @@map("services")
+}
+
+model Payment {
+  id         Int      @id @default(autoincrement())
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  order_id   Int
+  order      Order    @relation(fields: [order_id], references: [id])
+
+  amount         Decimal
+  method         PaymentMethod
+  status         PaymentStatus @default(UNPAID)
+  transaction_id String?
+  paid_at        DateTime?
+
+  @@map("payments")
+}
+
+model PromoCode {
+  code       String   @id
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  discount   Decimal
+  expires_at DateTime
+  is_active  Boolean  @default(true)
+  orders     Order[]
+}
+
+enum RoleName {
+  ADMIN
+  USER
+  GUEST
 }
 
 enum OrderStatus {
@@ -116,22 +240,17 @@ enum OrderStatus {
   CONFIRMED
   CANCELLED
   COMPLETED
-  PROCESSING
-  RETURNED
 }
 
 enum NotificationStatus {
-  PENDING
-  CONFIRMED
-  CANCELLED
-  COMPLETED
+  NOT_SENT
+  SENT
+  FAILED
 }
 
 enum PaymentStatus {
-  PENDING
-  CANCELLED
-  COMPLETED
-  FAILED
+  UNPAID
+  PAID
   REFUNDED
 }
 
@@ -139,4 +258,17 @@ enum PaymentMethod {
   CASH
   CARD
   INSTALLMENT_PAYMENT
+}
+
+enum Currency {
+  USD
+  EUR
+  GBP
+  RUB
+}
+
+enum ServiceType {
+  TOUR
+  TRANSFER
+  EXCURSION
 }
