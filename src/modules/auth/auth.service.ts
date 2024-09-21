@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 
 import { AuthDto } from './dto/auth.dto';
 import { UserService } from '../user/user.service';
+import {CreateUserDto} from "../user/dto/create-user.dto";
 
 @Injectable()
 export class AuthService {
@@ -27,7 +28,7 @@ export class AuthService {
     };
   }
 
-  async register(dto: AuthDto) {
+  async register(dto: CreateUserDto) {
     const isExists = await this.userService.getByEmail(dto.email);
     if (isExists) {
       throw new BadRequestException(

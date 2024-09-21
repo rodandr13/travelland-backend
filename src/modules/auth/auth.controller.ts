@@ -14,6 +14,7 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { AuthDto } from './dto/auth.dto';
 import { TokenInterceptor } from '../../interceptors/token.interceptor';
+import { CreateUserDto } from '../user/dto/create-user.dto';
 import { UserService } from '../user/user.service';
 
 @Controller('auth')
@@ -57,22 +58,18 @@ export class AuthController {
 
   @UseInterceptors(TokenInterceptor)
   @Post('register')
-  async register(@Body() dto: AuthDto) {
-    console.log('ВЫЗВАНА РЕГИСТАРЦИЯ');
+  async register(@Body() dto: CreateUserDto) {
     return await this.authService.register(dto);
   }
 
   @Post('logout')
   async logout(@Res() response: Response) {
-    console.log('logout');
-
     response.clearCookie('accessToken', {
       httpOnly: true,
       path: '/',
       domain: process.env.COOKIE_DOMAIN || 'localhost',
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-      expires: new Date(0),
     });
 
     response.clearCookie('refreshToken', {
@@ -81,7 +78,6 @@ export class AuthController {
       domain: process.env.COOKIE_DOMAIN || 'localhost',
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-      expires: new Date(0),
     });
 
     // Явно возвращаем ответ с завершением запроса

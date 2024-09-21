@@ -16,7 +16,6 @@ export class TokenInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap((data) => {
         const { refreshToken, accessToken } = data;
-        console.log('СРАБОТАЛ ИНТЕРСЕПШЕН');
         if (refreshToken && accessToken) {
           const expireAccess = new Date();
           expireAccess.setMinutes(expireAccess.getMinutes() + 2);

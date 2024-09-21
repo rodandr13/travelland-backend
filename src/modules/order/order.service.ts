@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   NotificationStatus,
   Order,
@@ -23,6 +24,7 @@ export class OrderService {
     private readonly userService: UserService,
     private readonly sanityService: SanityService,
     private readonly notificationService: NotificationService,
+    private readonly configService: ConfigService,
   ) {}
 
   async getUserOrders(userId: number): Promise<Order[]> {
@@ -87,6 +89,7 @@ export class OrderService {
     if (!existingUser) {
       existingUser = await this.userService.create({
         email: user.email,
+        firstName: 'Tourist',
         password: 'temp_password_hash',
       });
     }
@@ -185,7 +188,7 @@ export class OrderService {
     });
 
     await this.notificationService.sendOrderNotification(
-      '318657667',
+      this.configService.get<string>('TELEGRAM_CLIENT_ID'),
       createOrderDTO,
     );
     return order;

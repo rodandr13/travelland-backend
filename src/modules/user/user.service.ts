@@ -14,7 +14,7 @@ export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createUserDto: CreateUserDto) {
-    const { email, password } = createUserDto;
+    const { email, password, firstName } = createUserDto;
     const hashedPassword = await this.encryptPassword(password);
 
     const existingUser = await this.prisma.user.findUnique({
@@ -26,6 +26,7 @@ export class UserService {
     return this.prisma.user.create({
       data: {
         email,
+        first_name: firstName,
         password_hash: hashedPassword,
         is_active: true,
       },
@@ -39,6 +40,7 @@ export class UserService {
       },
       select: {
         id: true,
+        first_name: true,
         email: true,
       },
     });
