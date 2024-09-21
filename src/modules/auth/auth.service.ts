@@ -19,7 +19,7 @@ export class AuthService {
 
   async login(dto: AuthDto) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...user } = await this.validate(dto);
+    const { password_hash, ...user } = await this.validate(dto);
     const tokens = this.issueTokens(user.id);
 
     return {
@@ -35,7 +35,7 @@ export class AuthService {
       );
     }
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...user } = await this.userService.create(dto);
+    const { password_hash, ...user } = await this.userService.create(dto);
     const tokens = this.issueTokens(user.id);
 
     return {
@@ -59,7 +59,10 @@ export class AuthService {
     const user = await this.userService.getByEmail(dto.email);
     if (!user) throw new NotFoundException('Пользователь не найден');
 
-    const isValid = await this.comparePassword(dto.password, user.password);
+    const isValid = await this.comparePassword(
+      dto.password,
+      user.password_hash,
+    );
     if (!isValid) throw new UnauthorizedException('Неверный email или пароль');
 
     return user;
@@ -77,6 +80,7 @@ export class AuthService {
     try {
       result = await this.jwt.verifyAsync(refreshToken);
     } catch (error) {
+      console.log(error);
       throw new UnauthorizedException('Недействительный refresh токен');
     }
 

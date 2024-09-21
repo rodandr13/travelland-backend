@@ -29,12 +29,25 @@ model User {
   access_token  String?
   refresh_token String?
 
+  agency_id               Int?
+  agency                  Agency?        @relation(fields: [agency_id], references: [id])
   orders                  Order[]
   roles                   UserRole[]
   order_histories         OrderHistory[]
   order_histories_changed OrderHistory[] @relation("OrderHistoryChangedBy")
 
   @@map("users")
+}
+
+model Agency {
+  id          Int      @id @default(autoincrement())
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  name        String
+  description String?
+  users       User[]
+
+  @@map("agencies")
 }
 
 model UserRole {
@@ -65,11 +78,12 @@ model Role {
 }
 
 model Permission {
-  id               Int              @id @default(autoincrement())
-  created_at       DateTime         @default(now())
-  updated_at       DateTime         @updatedAt
-  name             String           @unique
-  description      String?
+  id          Int      @id @default(autoincrement())
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  name        String   @unique
+  description String?
+
   role_permissions RolePermission[]
 
   @@map("permissions")
@@ -108,11 +122,13 @@ model Order {
   cancellation_reason String?
   comments            String?
 
-  total_amount    Decimal
-  paid_amount     Decimal
+  paid_amount     Decimal   @default(0)
   discount_amount Decimal
   currency        Currency  @default(EUR)
   due_date        DateTime?
+
+  total_base_price    Decimal
+  total_current_price Decimal
 
   user_id Int
   user    User @relation(fields: [user_id], references: [id])
@@ -131,17 +147,22 @@ model Order {
 }
 
 model OrderItem {
-  id             Int              @id @default(autoincrement())
-  created_at     DateTime         @default(now())
-  updated_at     DateTime         @updatedAt
-  service_id     Int
-  service_type   ServiceType
-  service_title  String
-  date           DateTime
-  time           String
-  slug           String?
-  image_src      String?
-  image_lqip     String?
+  id         Int      @id @default(autoincrement())
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  service_id    String
+  service_type  ServiceType
+  service_title String
+  date          DateTime
+  time          String
+  slug          String?
+  image_src     String?
+  image_lqip    String?
+
+  total_base_price    Decimal
+  total_current_price Decimal
+
   service_prices OrderItemPrice[]
 
   provider_name String?
@@ -149,8 +170,6 @@ model OrderItem {
 
   order_id Int
   order    Order @relation(fields: [order_id], references: [id])
-
-  service Service? @relation(fields: [service_id], references: [id])
 
   @@map("order_items")
 }
@@ -166,7 +185,7 @@ model OrderHistory {
   changed_at      DateTime    @default(now())
   changed_by      Int
   changed_by_user User        @relation("OrderHistoryChangedBy", fields: [changed_by], references: [id])
-  modified_by     User?       @relation(fields: [userId], references: [id])
+  User            User?       @relation(fields: [userId], references: [id])
   userId          Int?
 
   @@map("order_histories")
@@ -182,25 +201,13 @@ model OrderItemPrice {
   quantity       Int
   category_title String
 
-  total_price Decimal
+  total_base_price    Decimal
+  total_current_price Decimal
 
   order_item_id Int
   order_item    OrderItem @relation(fields: [order_item_id], references: [id])
 
   @@map("order_item_prices")
-}
-
-model Service {
-  id          Int         @id @default(autoincrement())
-  created_at  DateTime    @default(now())
-  updated_at  DateTime    @updatedAt
-  title       String
-  description String?
-  type        ServiceType
-
-  order_items OrderItem[]
-
-  @@map("services")
 }
 
 model Payment {
@@ -227,12 +234,15 @@ model PromoCode {
   expires_at DateTime
   is_active  Boolean  @default(true)
   orders     Order[]
+
+  @@map("promo_codes")
 }
 
 enum RoleName {
   ADMIN
   USER
   GUEST
+  AGENCY_USER
 }
 
 enum OrderStatus {

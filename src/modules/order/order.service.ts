@@ -1,5 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { Order, PaymentMethod } from '@prisma/client';
+import {
+  NotificationStatus,
+  Order,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  Prisma,
+  ServiceType,
+} from '@prisma/client';
+import { v4 as uuidv4 } from 'uuid';
 
 import { CreateOrderDTO } from './dto/create-order.dto';
 import { SanityService } from '../external/sanity/sanity.service';
@@ -22,115 +31,155 @@ export class OrderService {
         user_id: userId,
       },
       include: {
-        order_reservations: {
+        order_items: {
           include: {
-            reservation_prices: true,
+            service_prices: true,
           },
         },
       },
     });
 
     return orders.map((order) => {
-      const reservationsWithTotals = order.order_reservations.map(
-        (reservation) => {
-          const reservationTotalCurrentPrice =
-            reservation.reservation_prices.reduce((sum, price) => {
-              return sum + price.current_price * price.amount_persons;
-            }, 0);
+      const orderItemsWithTotals = order.order_items.map((item) => {
+        const itemTotalCurrentPrice = item.service_prices.reduce(
+          (sum, price) => {
+            return sum + price.current_price.toNumber() * price.quantity;
+          },
+          0,
+        );
 
-          const reservationTotalBasePrice =
-            reservation.reservation_prices.reduce((sum, price) => {
-              return sum + price.base_price * price.amount_persons;
-            }, 0);
+        const itemTotalBasePrice = item.service_prices.reduce((sum, price) => {
+          return sum + price.base_price.toNumber() * price.quantity;
+        }, 0);
 
-          return {
-            ...reservation,
-            reservationTotalCurrentPrice,
-            reservationTotalBasePrice,
-          };
-        },
-      );
+        return {
+          ...item,
+          itemTotalCurrentPrice,
+          itemTotalBasePrice,
+        };
+      });
 
-      const orderTotalCurrentPrice = reservationsWithTotals.reduce(
-        (sum, reservation) => {
-          return sum + reservation.reservationTotalCurrentPrice;
-        },
-        0,
-      );
-
-      const orderTotalBasePrice = reservationsWithTotals.reduce(
-        (sum, reservation) => {
-          return sum + reservation.reservationTotalBasePrice;
+      const orderTotalCurrentPrice = orderItemsWithTotals.reduce(
+        (sum, item) => {
+          return sum + item.itemTotalCurrentPrice;
         },
         0,
       );
+
+      const orderTotalBasePrice = orderItemsWithTotals.reduce((sum, item) => {
+        return sum + item.itemTotalBasePrice;
+      }, 0);
 
       return {
         ...order,
         orderTotalCurrentPrice,
         orderTotalBasePrice,
-        order_reservations: reservationsWithTotals,
+        order_items: orderItemsWithTotals,
       };
     });
   }
 
   async createOrder(createOrderDTO: CreateOrderDTO) {
-    const { user, reservations, promoCode, paymentMethod } = createOrderDTO;
+    const { user, orderItems, paymentMethod } = createOrderDTO;
 
     let existingUser = await this.userService.getByEmail(user.email);
 
     if (!existingUser) {
       existingUser = await this.userService.create({
         email: user.email,
-        password: 'temp_password',
+        password: 'temp_password_hash',
       });
     }
 
     const paymentMethodEnum =
       PaymentMethod[paymentMethod.toUpperCase() as keyof typeof PaymentMethod];
 
+    let totalOrderBasePrice = new Prisma.Decimal(0);
+    let totalOrderCurrentPrice = new Prisma.Decimal(0);
+
+    const orderItemsData = await Promise.all(
+      orderItems.map(async (item) => {
+        const { basePrices, currentPrices } =
+          await this.sanityService.getExcursionPrices(item.id, item.date);
+
+        const servicePriceData = item.participants.map((participant) => {
+          const basePriceValue = basePrices.find(
+            (price) => participant.category === price.categoryId,
+          )?.price;
+          const currentPriceValue = currentPrices.find(
+            (price) => participant.category === price.categoryId,
+          )?.price;
+
+          if (basePriceValue === undefined || currentPriceValue === undefined) {
+            throw new Error(
+              `Price not found for category ${participant.category}`,
+            );
+          }
+
+          const basePrice = new Prisma.Decimal(basePriceValue);
+          const currentPrice = new Prisma.Decimal(currentPriceValue);
+
+          const quantity = participant.count;
+          const totalBasePrice = basePrice.mul(quantity);
+          const totalCurrentPrice = currentPrice.mul(quantity);
+
+          return {
+            category_title: participant.title,
+            price_type: participant.category,
+            base_price: basePrice,
+            current_price: currentPrice,
+            quantity: quantity,
+            total_base_price: totalBasePrice,
+            total_current_price: totalCurrentPrice,
+          };
+        });
+
+        const totalItemBasePrice = servicePriceData.reduce(
+          (sum, price) => sum.add(price.total_base_price),
+          new Prisma.Decimal(0),
+        );
+        const totalItemCurrentPrice = servicePriceData.reduce(
+          (sum, price) => sum.add(price.total_current_price),
+          new Prisma.Decimal(0),
+        );
+
+        totalOrderBasePrice = totalItemBasePrice.add(totalItemBasePrice);
+        totalOrderCurrentPrice = totalItemBasePrice.add(totalItemCurrentPrice);
+
+        return {
+          service_id: item.id,
+          service_title: item.title,
+          slug: item.slug,
+          image_src: item.image_src,
+          image_lqip: item.image_lqip,
+          service_type: item.type as ServiceType,
+          date: new Date(item.date),
+          time: item.time,
+          total_base_price: totalItemBasePrice,
+          total_current_price: totalItemCurrentPrice,
+          service_prices: {
+            create: servicePriceData,
+          },
+        };
+      }),
+    );
+
     const order = await this.prisma.order.create({
       data: {
-        user_id: existingUser.id,
+        user: {
+          connect: { id: existingUser.id },
+        },
+        order_number: uuidv4(),
         payment_method: paymentMethodEnum,
-        promo_code: promoCode?.toUpperCase(),
-        order_status: 'PENDING',
-        email_status: 'PENDING',
-        telegram_status: 'PENDING',
-        payment_status: 'PENDING',
-        order_reservations: {
-          create: await Promise.all(
-            reservations.map(async (reservation) => {
-              const { basePrices, currentPrices } =
-                await this.sanityService.getExcursionPrices(
-                  reservation.id,
-                  reservation.date,
-                );
-              return {
-                reservation_id: reservation.id,
-                reservation_title: reservation.title,
-                slug: reservation.slug,
-                image_src: reservation.image_src,
-                image_lqip: reservation.image_lqip,
-                reservation_type: reservation.type,
-                date: new Date(reservation.date).toISOString(),
-                time: reservation.time,
-                reservation_prices: {
-                  create: reservation.participants.map((participant) => ({
-                    category_title: participant.title,
-                    price_type: participant.category,
-                    base_price: basePrices.find(
-                      (price) => participant.category === price.categoryId,
-                    ).price,
-                    current_price: currentPrices.find(
-                      (price) => participant.category === price.categoryId,
-                    ).price,
-                    amount_persons: participant.count,
-                  })),
-                },
-              };
-            }),
-          ),
+        order_status: OrderStatus.PENDING,
+        email_status: NotificationStatus.NOT_SENT,
+        telegram_status: NotificationStatus.NOT_SENT,
+        payment_status: PaymentStatus.UNPAID,
+        total_base_price: totalOrderBasePrice,
+        total_current_price: totalOrderCurrentPrice,
+        discount_amount: totalOrderBasePrice.sub(totalOrderCurrentPrice),
+        order_items: {
+          create: orderItemsData,
         },
       },
     });

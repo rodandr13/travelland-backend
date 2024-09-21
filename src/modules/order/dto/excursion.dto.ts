@@ -1,5 +1,11 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsNotEmpty, IsString, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsNotEmpty,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 
 import { BookingDTO } from './booking.dto';
 import { ParticipantDTO } from './participant.dto';
@@ -23,6 +29,6 @@ export class ExcursionDto extends BookingDTO {
   image_lqip: string;
 
   @IsNotEmpty()
-  @IsString()
-  type: string = 'excursion';
+  @IsEnum(['EXCURSION'])
+  type: string = 'EXCURSION';
 }

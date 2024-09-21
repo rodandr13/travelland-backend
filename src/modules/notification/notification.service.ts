@@ -17,8 +17,7 @@ export class NotificationService {
     orderMessage += `*Телефон:* ${orderDTO.user.telephone}\n`;
     orderMessage += `*Почта:* ${orderDTO.user.email}\n\n`;
     orderMessage += `*Услуги в заказе:*\n`;
-
-    orderDTO.reservations.forEach((reservation: any) => {
+    orderDTO.orderItems.forEach((reservation: any) => {
       orderMessage += `\n*Название:* ${reservation.title}\n`;
       orderMessage += `*Дата:* ${new Date(reservation.date).toLocaleDateString()}\n`;
       orderMessage += `*Время:* ${reservation.time}\n`;

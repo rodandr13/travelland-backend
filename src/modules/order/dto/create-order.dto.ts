@@ -30,9 +30,9 @@ export class CreateOrderDTO {
   @Type(() => BookingDTO, {
     discriminator: {
       property: 'type',
-      subTypes: [{ value: ExcursionDto, name: 'excursion' }],
+      subTypes: [{ value: ExcursionDto, name: 'EXCURSION' }],
     },
     keepDiscriminatorProperty: true,
   })
-  reservations: ExcursionDto[];
+  orderItems: ExcursionDto[];
 }
