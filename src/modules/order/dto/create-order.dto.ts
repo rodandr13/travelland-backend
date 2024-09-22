@@ -34,5 +34,5 @@ export class CreateOrderDTO {
     },
     keepDiscriminatorProperty: true,
   })
-  orderItems: ExcursionDto[];
+  orderServices: ExcursionDto[];
 }

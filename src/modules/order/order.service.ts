@@ -28,61 +28,22 @@ export class OrderService {
   ) {}
 
   async getUserOrders(userId: number): Promise<Order[]> {
-    const orders = await this.prisma.order.findMany({
+    return this.prisma.order.findMany({
       where: {
         user_id: userId,
       },
       include: {
-        order_items: {
+        order_services: {
           include: {
             service_prices: true,
           },
         },
       },
     });
-
-    return orders.map((order) => {
-      const orderItemsWithTotals = order.order_items.map((item) => {
-        const itemTotalCurrentPrice = item.service_prices.reduce(
-          (sum, price) => {
-            return sum + price.current_price.toNumber() * price.quantity;
-          },
-          0,
-        );
-
-        const itemTotalBasePrice = item.service_prices.reduce((sum, price) => {
-          return sum + price.base_price.toNumber() * price.quantity;
-        }, 0);
-
-        return {
-          ...item,
-          itemTotalCurrentPrice,
-          itemTotalBasePrice,
-        };
-      });
-
-      const orderTotalCurrentPrice = orderItemsWithTotals.reduce(
-        (sum, item) => {
-          return sum + item.itemTotalCurrentPrice;
-        },
-        0,
-      );
-
-      const orderTotalBasePrice = orderItemsWithTotals.reduce((sum, item) => {
-        return sum + item.itemTotalBasePrice;
-      }, 0);
-
-      return {
-        ...order,
-        orderTotalCurrentPrice,
-        orderTotalBasePrice,
-        order_items: orderItemsWithTotals,
-      };
-    });
   }
 
   async createOrder(createOrderDTO: CreateOrderDTO) {
-    const { user, orderItems, paymentMethod } = createOrderDTO;
+    const { user, orderServices, paymentMethod } = createOrderDTO;
 
     let existingUser = await this.userService.getByEmail(user.email);
 
@@ -100,12 +61,12 @@ export class OrderService {
     let totalOrderBasePrice = new Prisma.Decimal(0);
     let totalOrderCurrentPrice = new Prisma.Decimal(0);
 
-    const orderItemsData = await Promise.all(
-      orderItems.map(async (item) => {
+    const orderServicesData = await Promise.all(
+      orderServices.map(async (service) => {
         const { basePrices, currentPrices } =
-          await this.sanityService.getExcursionPrices(item.id, item.date);
+          await this.sanityService.getExcursionPrices(service.id, service.date);
 
-        const servicePriceData = item.participants.map((participant) => {
+        const servicePriceData = service.participants.map((participant) => {
           const basePriceValue = basePrices.find(
             (price) => participant.category === price.categoryId,
           )?.price;
@@ -137,29 +98,31 @@ export class OrderService {
           };
         });
 
-        const totalItemBasePrice = servicePriceData.reduce(
+        const totalServiceBasePrice = servicePriceData.reduce(
           (sum, price) => sum.add(price.total_base_price),
           new Prisma.Decimal(0),
         );
-        const totalItemCurrentPrice = servicePriceData.reduce(
+        const totalServiceCurrentPrice = servicePriceData.reduce(
           (sum, price) => sum.add(price.total_current_price),
           new Prisma.Decimal(0),
         );
 
-        totalOrderBasePrice = totalItemBasePrice.add(totalItemBasePrice);
-        totalOrderCurrentPrice = totalItemBasePrice.add(totalItemCurrentPrice);
+        totalOrderBasePrice = totalOrderBasePrice.add(totalServiceBasePrice);
+        totalOrderCurrentPrice = totalOrderCurrentPrice.add(
+          totalServiceCurrentPrice,
+        );
 
         return {
-          service_id: item.id,
-          service_title: item.title,
-          slug: item.slug,
-          image_src: item.image_src,
-          image_lqip: item.image_lqip,
-          service_type: item.type as ServiceType,
-          date: new Date(item.date),
-          time: item.time,
-          total_base_price: totalItemBasePrice,
-          total_current_price: totalItemCurrentPrice,
+          service_id: service.id,
+          service_title: service.title,
+          slug: service.slug,
+          image_src: service.image_src,
+          image_lqip: service.image_lqip,
+          service_type: service.type as ServiceType,
+          date: new Date(service.date),
+          time: service.time,
+          total_base_price: totalServiceBasePrice,
+          total_current_price: totalServiceCurrentPrice,
           service_prices: {
             create: servicePriceData,
           },
@@ -181,8 +144,8 @@ export class OrderService {
         total_base_price: totalOrderBasePrice,
         total_current_price: totalOrderCurrentPrice,
         discount_amount: totalOrderBasePrice.sub(totalOrderCurrentPrice),
-        order_items: {
-          create: orderItemsData,
+        order_services: {
+          create: orderServicesData,
         },
       },
     });

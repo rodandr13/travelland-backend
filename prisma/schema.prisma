@@ -136,7 +136,7 @@ model Order {
   promo_code_id String?
   promo_code    PromoCode? @relation(fields: [promo_code_id], references: [code])
 
-  order_items     OrderItem[]
+  order_services     OrderServices[]
   payments        Payment[]
   order_histories OrderHistory[]
 
@@ -146,7 +146,7 @@ model Order {
   @@map("orders")
 }
 
-model OrderItem {
+model OrderServices {
   id         Int      @id @default(autoincrement())
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -163,7 +163,7 @@ model OrderItem {
   total_base_price    Decimal
   total_current_price Decimal
 
-  service_prices OrderItemPrice[]
+  service_prices OrderServicePrice[]
 
   provider_name String?
   provider_id   Int?
@@ -171,7 +171,7 @@ model OrderItem {
   order_id Int
   order    Order @relation(fields: [order_id], references: [id])
 
-  @@map("order_items")
+  @@map("order_services")
 }
 
 model OrderHistory {
@@ -191,7 +191,7 @@ model OrderHistory {
   @@map("order_histories")
 }
 
-model OrderItemPrice {
+model OrderServicePrice {
   id             Int      @id @default(autoincrement())
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
@@ -204,10 +204,10 @@ model OrderItemPrice {
   total_base_price    Decimal
   total_current_price Decimal
 
-  order_item_id Int
-  order_item    OrderItem @relation(fields: [order_item_id], references: [id])
+  order_service_id Int
+  order_service    OrderServices @relation(fields: [order_service_id], references: [id])
 
-  @@map("order_item_prices")
+  @@map("order_service_prices")
 }
 
 model Payment {
