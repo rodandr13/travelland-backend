@@ -14,27 +14,10 @@ export class PaymentController {
   @Post('initiate')
   async initiatePayment(@Body() paymentData: any, @Res() res: Response) {
     const paymentParams = this.paymentService.buildPaymentRequest(paymentData);
+    const queryParams = new URLSearchParams(paymentParams).toString();
+    const redirectUrl = `${this.configService.get('GP_URL_PAY_REQUEST')}?${queryParams}`;
 
-    const formFields = Object.entries(paymentParams)
-      .map(
-        ([key, value]) =>
-          `<input type="hidden" name="${key}" value="${value}" />`,
-      )
-      .join('\n');
-
-    const htmlContent = `
-      <html>
-        <head><title>Redirecting...</title></head>
-        <body onload="document.forms[0].submit();">
-          <form action=${this.configService.get('GP_URL_PAY_REQUEST')} method="POST">
-            ${formFields}
-          </form>
-        </body>
-      </html>
-    `;
-
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(htmlContent);
+    res.redirect(redirectUrl);
   }
 
   @Get('return')

@@ -5,7 +5,6 @@ import { PaymentController } from './payment.controller';
 import { PaymentService } from './payment.service';
 
 @Module({
-  imports: [HttpModule],
   providers: [PaymentService],
   controllers: [PaymentController],
 })
