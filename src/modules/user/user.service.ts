@@ -42,6 +42,7 @@ export class UserService {
         id: true,
         first_name: true,
         email: true,
+        phone_number: true,
       },
     });
   }

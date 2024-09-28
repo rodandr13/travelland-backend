@@ -112,8 +112,7 @@ export class AuthService {
       this.logger.warn(`User with id ${result.id} not found`);
       throw new UnauthorizedException('Пользователь не найден');
     }
-    const tokens = this.issueTokens(user.id);
-
+    const tokens = await this.issueTokens(user.id);
     return {
       ...tokens,
     };

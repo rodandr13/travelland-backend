@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { ExternalModule } from './external/external.module';
 import { NotificationModule } from './notification/notification.module';
 import { OrderModule } from './order/order.module';
+import { PaymentModule } from './payment/payment.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UserModule } from './user/user.module';
 
@@ -19,6 +20,7 @@ import { UserModule } from './user/user.module';
     OrderModule,
     ExternalModule,
     NotificationModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [AppService],
