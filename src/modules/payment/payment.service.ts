@@ -1,130 +1,119 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as crypto from 'crypto';
-import * as fs from 'node:fs';
 
-type PaymentData = {
-  orderNumber: number;
-  amount: number;
-  currency: string;
-  depositflag: string;
-  description?: string;
-  email?: string;
-};
-
-type PaymentParams = {
-  [key: string]: string;
-};
-
-enum GpWebPayOperations {
-  CREATE_ORDER = 'CREATE_ORDER',
-}
+import { GP_WEB_PAY_FIELD_ORDER, SIGN_KEYS } from './gpwebpay.config';
+import { PaymentDataDto } from './payment.dto';
+import {
+  GPWebPayOperations,
+  PaymentParams,
+  PaymentResponseParams,
+  PaymentResponseWithoutDigest,
+} from './types';
+import { GPWebPayUtils } from './utils/gpwebpay.utils';
 
 @Injectable()
 export class PaymentService {
-  private readonly privateKey: string;
-  private readonly publicKey: string;
+  constructor(
+    private readonly configService: ConfigService,
+    @Inject('PRIVATE_KEY') private readonly privateKey: string,
+    @Inject('PUBLIC_KEY') private readonly publicKey: string,
+  ) {}
 
-  constructor(private readonly configService: ConfigService) {
-    this.privateKey = fs.readFileSync(
-      this.configService.get('GP_PAYMENT_KEY'),
-      'utf8',
-    );
-
-    this.publicKey = fs.readFileSync(
-      this.configService.get('GP_PUBLIC_KEY'),
-      'utf8',
-    );
-  }
-
-  buildPaymentRequest(paymentData: PaymentData): PaymentParams {
+  buildPaymentRequest(paymentData: PaymentDataDto): PaymentParams {
     const params: Record<string, string> = {
       MERCHANTNUMBER: this.configService.get('GP_MERCHANT_NUMBER'),
-      OPERATION: GpWebPayOperations.CREATE_ORDER,
+      OPERATION: GPWebPayOperations.CREATE_ORDER,
       ORDERNUMBER: paymentData.orderNumber.toString(),
       AMOUNT: paymentData.amount.toString(),
-      CURRENCY: paymentData.currency,
-      DEPOSITFLAG: paymentData.depositflag,
+      CURRENCY: paymentData.currency.toString(),
+      DEPOSITFLAG: paymentData.depositflag.toString(),
       URL: this.configService.get('GP_URL_PAY_RESPONSE'),
       DESCRIPTION: paymentData.description || '',
       EMAIL: paymentData.email || '',
+      PAYMETHOD: 'CRD',
     };
 
-    const signKeys = [
-      'MERCHANTNUMBER',
-      'OPERATION',
-      'ORDERNUMBER',
-      'AMOUNT',
-      'CURRENCY',
-      'DEPOSITFLAG',
-      'URL',
-      'DESCRIPTION',
-      'EMAIL',
-    ];
-
-    const baseString = this.createBaseString(params, signKeys);
-    params.DIGEST = this.signData(baseString);
+    const baseString = GPWebPayUtils.createBaseString(params, SIGN_KEYS);
+    params.DIGEST = GPWebPayUtils.signData(
+      baseString,
+      this.privateKey,
+      this.configService.get('GP_PASSPHRASE'),
+    );
 
     return params;
   }
 
-  private createBaseString(params: any, signKeys: string[]): string {
-    const values = signKeys
-      .filter((key) => params[key] !== undefined && params[key] !== '')
-      .map((key) => params[key]);
-    return values.join('|');
-  }
+  private verifyResponse(params: PaymentResponseParams): boolean {
+    const { DIGEST, DIGEST1, ...responseFields } = params;
 
-  private signData(data: string): string {
-    const signer = crypto.createSign('RSA-SHA1');
-    signer.update(data);
-    return signer.sign(
-      {
-        key: this.privateKey,
-        passphrase: this.configService.get('GP_PASSPHRASE'),
-      },
-      'base64',
+    if (!DIGEST || !DIGEST1) {
+      throw new Error('DIGEST or DIGEST1 is missing in the response');
+    }
+
+    // Массив ключей из ответа, исключая DIGEST и DIGEST1
+    const signKeys = Object.keys(responseFields);
+
+    // Сортировка ключей в правильном порядке
+    const orderedKeys = this.getOrderedResponseKeys(signKeys);
+
+    // Базовая строка для DIGEST
+    const baseString = this.createResponseBaseString(
+      responseFields,
+      orderedKeys,
     );
+
+    // Проверка DIGEST
+    const isDigestValid = GPWebPayUtils.verifySignature(
+      baseString,
+      DIGEST,
+      this.publicKey,
+    );
+
+    // Базовая строка для DIGEST1 (добавляю MERCHANTNUMBER по доке)
+    const baseStringWithMerchant =
+      baseString + '|' + this.configService.get<string>('GP_MERCHANT_NUMBER');
+
+    // Проверка DIGEST1
+    const isDigest1Valid = GPWebPayUtils.verifySignature(
+      baseStringWithMerchant,
+      DIGEST1,
+      this.publicKey,
+    );
+
+    return isDigestValid && isDigest1Valid;
   }
 
-  private verifyResponse(params: PaymentParams): boolean {
-    const digest = params.DIGEST;
-    const baseString = this.createResponseBaseString(params);
-    const publicKey = this.publicKey;
-
-    const verifier = crypto.createVerify('RSA-SHA1');
-    verifier.update(baseString);
-    return verifier.verify(publicKey, digest, 'base64');
+  private getOrderedResponseKeys(keys: string[]): string[] {
+    return GP_WEB_PAY_FIELD_ORDER.filter((key) => keys.includes(key));
   }
 
-  private createResponseBaseString(params: PaymentParams): string {
-    const signKeys = [
-      'OPERATION',
-      'ORDERNUMBER',
-      'PRCODE',
-      'SRCODE',
-      'RESULTTEXT',
-    ];
-
-    const values = signKeys
-      .filter((key) => params[key] !== undefined && params[key] !== '')
-      .map((key) => params[key]);
-
+  private createResponseBaseString(
+    params: PaymentResponseWithoutDigest,
+    orderedKeys: string[],
+  ): string {
+    const values = orderedKeys.map((key) => params[key] as string);
     return values.join('|');
   }
 
-  async processPaymentResult(params: any): Promise<void> {
+  async processPaymentResult(params: PaymentResponseParams): Promise<void> {
     try {
       const isValid = this.verifyResponse(params);
       if (!isValid) {
         throw new Error('Invalid response signature');
       }
+
+      const { PRCODE, SRCODE, RESULTTEXT } = params;
+
+      if (PRCODE === '0' && SRCODE === '0') {
+        // Платеж успешен
+      } else {
+        throw new Error(
+          `Payment failed with PRCODE: ${PRCODE}, SRCODE: ${SRCODE}, RESULTTEXT: ${RESULTTEXT}`,
+        );
+      }
     } catch (error) {
+      console.error('Payment processing error:', error);
       throw error;
     }
-  }
-
-  async handleNotification(params: any): Promise<void> {
-    await this.processPaymentResult(params);
   }
 }
