@@ -18,7 +18,7 @@ import { PaymentService } from './payment.service';
     {
       provide: 'PUBLIC_KEY',
       useFactory: async (configService: ConfigService) => {
-        const keyPath = configService.get('GP_PUBLIC_KEY');
+        const keyPath = configService.get('GP_TEST_PUBLIC_KEY');
         return fs.promises.readFile(keyPath, 'utf8');
       },
       inject: [ConfigService],

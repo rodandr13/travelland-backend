@@ -5,7 +5,6 @@ import {
   Order,
   OrderStatus,
   PaymentMethod,
-  PaymentStatus,
   Prisma,
   ServiceType,
 } from '@prisma/client';
@@ -140,7 +139,6 @@ export class OrderService {
         order_status: OrderStatus.PENDING,
         email_status: NotificationStatus.NOT_SENT,
         telegram_status: NotificationStatus.NOT_SENT,
-        payment_status: PaymentStatus.UNPAID,
         total_base_price: totalOrderBasePrice,
         total_current_price: totalOrderCurrentPrice,
         discount_amount: totalOrderBasePrice.sub(totalOrderCurrentPrice),

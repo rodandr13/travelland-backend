@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+  // shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 model User {
@@ -111,13 +111,11 @@ model Order {
   order_status    OrderStatus        @default(PENDING)
   email_status    NotificationStatus
   telegram_status NotificationStatus
-  payment_status  PaymentStatus      @default(UNPAID)
   payment_method  PaymentMethod?
 
   cancellation_reason String?
   comments            String?
 
-  paid_amount     Decimal   @default(0)
   discount_amount Decimal
   currency        Currency  @default(EUR)
   due_date        DateTime?
@@ -131,12 +129,11 @@ model Order {
   promo_code_id String?
   promo_code    PromoCode? @relation(fields: [promo_code_id], references: [code])
 
-  order_services     OrderServices[]
+  order_services  OrderServices[]
   payments        Payment[]
   order_histories OrderHistory[]
 
   @@index([order_status])
-  @@index([payment_status])
   @@index([user_id])
   @@map("orders")
 }
@@ -206,17 +203,18 @@ model OrderServicePrice {
 }
 
 model Payment {
-  id         Int      @id @default(autoincrement())
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  order_id   Int
-  order      Order    @relation(fields: [order_id], references: [id])
+  id             Int      @id @default(autoincrement())
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  order_id       Int
+  transaction_id Int
+  prcode         String?
+  srcode         String?
+  result_text    String?
+  order          Order    @relation(fields: [order_id], references: [id])
 
-  amount         Decimal
-  method         PaymentMethod
-  status         PaymentStatus @default(UNPAID)
-  transaction_id String?
-  paid_at        DateTime?
+  amount Decimal
+  status PaymentStatus @default(UNPAID)
 
   @@map("payments")
 }

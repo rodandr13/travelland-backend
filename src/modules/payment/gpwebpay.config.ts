@@ -35,3 +35,20 @@ export const SIGN_KEYS = [
   'EMAIL',
   'REFERENCENUMBER',
 ];
+
+export const CURRENCY = {
+  EUR: 978,
+};
+
+export const DEPOSIT_FLAG = {
+  ON: '0',
+  OFF: '1',
+};
+
+export const PAYMENT_METHOD = {
+  CARD: 'CRD',
+};
+
+export const PRCODE_MESSAGES = {
+  DUPLICATE_ORDER_NUMBER: '14',
+};

@@ -1,7 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Response } from 'express';
 
-import { GP_WEB_PAY_FIELD_ORDER, SIGN_KEYS } from './gpwebpay.config';
+import {
+  CURRENCY,
+  DEPOSIT_FLAG,
+  GP_WEB_PAY_FIELD_ORDER,
+  PAYMENT_METHOD,
+  PRCODE_MESSAGES,
+  SIGN_KEYS,
+} from './gpwebpay.config';
 import { PaymentDataDto } from './payment.dto';
 import {
   GPWebPayOperations,
@@ -13,31 +21,60 @@ import { GPWebPayUtils } from './utils/gpwebpay.utils';
 
 @Injectable()
 export class PaymentService {
+  private readonly gpTestUrlPayRequest: string;
+  private readonly gpMerchantNumber: string;
+  private readonly gpUrlPayResponse: string;
+  private readonly gpPassphrase: string;
+
   constructor(
     private readonly configService: ConfigService,
     @Inject('PRIVATE_KEY') private readonly privateKey: string,
     @Inject('PUBLIC_KEY') private readonly publicKey: string,
-  ) {}
+  ) {
+    this.gpTestUrlPayRequest = this.configService.get<string>(
+      'GP_TEST_URL_PAY_REQUEST',
+    );
+    this.gpMerchantNumber =
+      this.configService.get<string>('GP_MERCHANT_NUMBER');
+    this.gpUrlPayResponse = this.configService.get<string>(
+      'GP_URL_PAY_RESPONSE',
+    );
+    this.gpPassphrase = this.configService.get<string>('GP_PASSPHRASE');
+  }
+
+  getPaymentUrl(paymentData: PaymentDataDto): string {
+    const paymentParams = this.buildPaymentRequest(paymentData);
+    const queryParams = new URLSearchParams(paymentParams).toString();
+    return `${this.gpTestUrlPayRequest}?${queryParams}`;
+  }
+
+  async initiatePaymentRedirect(
+    paymentData: PaymentDataDto,
+    res: Response,
+  ): Promise<void> {
+    const redirectUrl = this.getPaymentUrl(paymentData);
+    res.redirect(redirectUrl);
+  }
 
   buildPaymentRequest(paymentData: PaymentDataDto): PaymentParams {
     const params: Record<string, string> = {
-      MERCHANTNUMBER: this.configService.get('GP_MERCHANT_NUMBER'),
+      MERCHANTNUMBER: this.gpMerchantNumber,
       OPERATION: GPWebPayOperations.CREATE_ORDER,
-      ORDERNUMBER: paymentData.orderNumber.toString(),
+      ORDERNUMBER: paymentData.paymentNumber.toString(),
       AMOUNT: paymentData.amount.toString(),
-      CURRENCY: paymentData.currency.toString(),
-      DEPOSITFLAG: paymentData.depositflag.toString(),
-      URL: this.configService.get('GP_URL_PAY_RESPONSE'),
-      DESCRIPTION: paymentData.description || '',
+      CURRENCY: CURRENCY.EUR.toString(),
+      DEPOSITFLAG: DEPOSIT_FLAG.OFF,
+      URL: this.gpUrlPayResponse,
       EMAIL: paymentData.email || '',
-      PAYMETHOD: 'CRD',
+      MERORDERNUM: paymentData.orderNumber.toString(),
+      PAYMETHOD: PAYMENT_METHOD.CARD,
     };
 
     const baseString = GPWebPayUtils.createBaseString(params, SIGN_KEYS);
     params.DIGEST = GPWebPayUtils.signData(
       baseString,
       this.privateKey,
-      this.configService.get('GP_PASSPHRASE'),
+      this.gpPassphrase,
     );
 
     return params;
@@ -70,8 +107,7 @@ export class PaymentService {
     );
 
     // Базовая строка для DIGEST1 (добавляю MERCHANTNUMBER по доке)
-    const baseStringWithMerchant =
-      baseString + '|' + this.configService.get<string>('GP_MERCHANT_NUMBER');
+    const baseStringWithMerchant = baseString + '|' + this.gpMerchantNumber;
 
     // Проверка DIGEST1
     const isDigest1Valid = GPWebPayUtils.verifySignature(
@@ -103,6 +139,9 @@ export class PaymentService {
       }
 
       const { PRCODE, SRCODE, RESULTTEXT } = params;
+
+      if (PRCODE === PRCODE_MESSAGES.DUPLICATE_ORDER_NUMBER) {
+      }
 
       if (PRCODE === '0' && SRCODE === '0') {
         // Платеж успешен
