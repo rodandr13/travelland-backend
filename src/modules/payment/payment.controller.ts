@@ -1,5 +1,14 @@
-import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
-import { Response } from 'express';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpException,
+  HttpStatus,
+  Post,
+  Query,
+  Redirect,
+} from '@nestjs/common';
+import { PaymentMethod } from '@prisma/client';
 
 import { PaymentDataDto } from './payment.dto';
 import { PaymentService } from './payment.service';
@@ -9,20 +18,22 @@ export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
   @Post('initiate')
-  async initiatePayment(
-    @Body() paymentData: PaymentDataDto,
-    @Res() res: Response,
-  ) {
-    await this.paymentService.initiatePaymentRedirect(paymentData, res);
+  @Redirect()
+  async initiatePayment(@Body() paymentData: PaymentDataDto) {
+    const url = await this.paymentService.initiatePayment(paymentData);
+    return { url };
   }
 
   @Get('return')
-  async handleReturn(@Query() query, @Res() res: Response) {
+  async handleReturn(@Query() query) {
     try {
-      await this.paymentService.processPaymentResult(query);
-      res.send('Payment successful');
+      await this.paymentService.processPaymentResult(PaymentMethod.CARD, query);
+      return 'Payment successful';
     } catch (error: any) {
-      res.send(`Payment failed: ${error.message}`);
+      throw new HttpException(
+        `Payment failed: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 }

@@ -2,8 +2,12 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'node:fs';
 
+import { GpwebpayService } from './gpwebpay.service';
 import { PaymentController } from './payment.controller';
 import { PaymentService } from './payment.service';
+import { PaymentStrategyFactory } from './paymentStrategyFactory';
+import { CardPaymentStrategy } from './strategies/card-payment.strategy';
+import { CashPaymentStrategy } from './strategies/cash-payment.strategy';
 
 @Module({
   providers: [
@@ -23,7 +27,11 @@ import { PaymentService } from './payment.service';
       },
       inject: [ConfigService],
     },
+    GpwebpayService,
     PaymentService,
+    PaymentStrategyFactory,
+    CardPaymentStrategy,
+    CashPaymentStrategy,
   ],
   controllers: [PaymentController],
 })

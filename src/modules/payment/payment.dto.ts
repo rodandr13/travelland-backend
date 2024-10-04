@@ -1,3 +1,4 @@
+import { PaymentMethod } from '@prisma/client';
 import { IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class PaymentDataDto {
@@ -9,6 +10,9 @@ export class PaymentDataDto {
 
   @IsNumber()
   amount: number;
+
+  @IsString()
+  paymentMethod: PaymentMethod;
 
   @IsOptional()
   @IsString()
