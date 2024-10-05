@@ -204,7 +204,7 @@ model Payment {
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
   order_id       Int
-  transaction_id Int
+  transaction_id Int      @unique @default(autoincrement())
   prcode         String?
   srcode         String?
   result_text    String?
