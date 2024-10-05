@@ -34,5 +34,6 @@ import { CashPaymentStrategy } from './strategies/cash-payment.strategy';
     CashPaymentStrategy,
   ],
   controllers: [PaymentController],
+  exports: [PaymentService],
 })
 export class PaymentModule {}

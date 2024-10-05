@@ -18,6 +18,12 @@ export class OrderController {
 
   @Post()
   async createOrder(@Body() createOrderDto: CreateOrderDTO) {
-    return this.orderService.createOrder(createOrderDto);
+    const result = await this.orderService.createOrder(createOrderDto);
+    console.log(result);
+    if (result.paymentUrl) {
+      return { redirect: result.paymentUrl };
+    } else {
+      return { message: 'Заказ создан без необходимости оплаты' };
+    }
   }
 }

@@ -18,7 +18,7 @@ export class TokenInterceptor implements NestInterceptor {
         const { refreshToken, accessToken } = data;
         if (refreshToken && accessToken) {
           const expireAccess = new Date();
-          expireAccess.setMinutes(expireAccess.getMinutes() + 2);
+          expireAccess.setMinutes(expireAccess.getMinutes() + 30);
 
           const expireRefresh = new Date();
           expireRefresh.setDate(expireRefresh.getDate() + 7);

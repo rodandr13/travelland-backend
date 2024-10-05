@@ -157,9 +157,6 @@ model OrderServices {
 
   service_prices OrderServicePrice[]
 
-  provider_name String?
-  provider_id   Int?
-
   order_id Int
   order    Order @relation(fields: [order_id], references: [id])
 

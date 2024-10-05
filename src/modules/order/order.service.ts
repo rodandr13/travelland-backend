@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   NotificationStatus,
@@ -13,6 +13,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { CreateOrderDTO } from './dto/create-order.dto';
 import { SanityService } from '../external/sanity/sanity.service';
 import { NotificationService } from '../notification/notification.service';
+import { PaymentDataDto } from '../payment/payment.dto';
+import { PaymentService } from '../payment/payment.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserService } from '../user/user.service';
 
@@ -24,6 +26,7 @@ export class OrderService {
     private readonly sanityService: SanityService,
     private readonly notificationService: NotificationService,
     private readonly configService: ConfigService,
+    private readonly paymentService: PaymentService,
   ) {}
 
   async getUserOrders(userId: number): Promise<Order[]> {
@@ -148,10 +151,37 @@ export class OrderService {
       },
     });
 
-    await this.notificationService.sendOrderNotification(
-      this.configService.get<string>('TELEGRAM_CLIENT_ID'),
-      createOrderDTO,
-    );
-    return order;
+    if (paymentMethodEnum === PaymentMethod.CARD) {
+      const amountInCentsDecimal = totalOrderCurrentPrice.mul(100);
+      const amountInCents = amountInCentsDecimal
+        .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
+        .toNumber();
+
+      const paymentData: PaymentDataDto = {
+        paymentMethod: PaymentMethod.CARD,
+        orderNumber: Number(order.id),
+        paymentNumber: Number(order.id),
+        email: existingUser.email,
+        amount: amountInCents,
+      };
+
+      const paymentUrl = await this.paymentService.initiatePayment(paymentData);
+
+      await this.notificationService.sendOrderNotification(
+        this.configService.get<string>('TELEGRAM_CLIENT_ID'),
+        createOrderDTO,
+      );
+
+      return { paymentUrl };
+    } else if (paymentMethodEnum === PaymentMethod.CASH) {
+      await this.notificationService.sendOrderNotification(
+        this.configService.get<string>('TELEGRAM_CLIENT_ID'),
+        createOrderDTO,
+      );
+
+      return { message: 'Заказ создан. Ожидается оплата наличными.' };
+    } else {
+      throw new BadRequestException('Неподдерживаемый метод оплаты.');
+    }
   }
 }
