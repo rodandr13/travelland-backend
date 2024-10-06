@@ -3,7 +3,7 @@ import { PaymentMethod } from '@prisma/client';
 
 import { CardPaymentStrategy } from './strategies/card-payment.strategy';
 import { CashPaymentStrategy } from './strategies/cash-payment.strategy';
-import { PaymentStrategy } from './strategies/payment.strategy';
+import { PaymentInterfaceStrategy } from './strategies/payment.interface.strategy';
 
 @Injectable()
 export class PaymentStrategyFactory {
@@ -12,7 +12,7 @@ export class PaymentStrategyFactory {
     private readonly cashStrategy: CashPaymentStrategy,
   ) {}
 
-  public getStrategy(method: PaymentMethod): PaymentStrategy {
+  public getStrategy(method: PaymentMethod): PaymentInterfaceStrategy {
     switch (method) {
       case PaymentMethod.CARD:
         return this.gpwebpayStrategy;

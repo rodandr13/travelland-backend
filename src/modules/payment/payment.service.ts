@@ -19,8 +19,8 @@ export class PaymentService {
   async processPaymentResult(
     paymentMethod: PaymentMethod,
     params: PaymentResponseParams,
-  ): Promise<void> {
+  ) {
     const strategy = this.strategyFactory.getStrategy(paymentMethod);
-    await strategy.processPaymentResult(params);
+    return await strategy.processPaymentResult(params);
   }
 }

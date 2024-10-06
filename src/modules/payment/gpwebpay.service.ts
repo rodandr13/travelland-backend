@@ -15,6 +15,7 @@ import {
   PaymentParams,
   PaymentResponseParams,
   PaymentResponseWithoutDigest,
+  PaymentStatusResponse,
 } from './types';
 import { GPWebPayUtils } from './utils/gpwebpay.utils';
 
@@ -122,7 +123,7 @@ export class GpwebpayService {
     return values.join('|');
   }
 
-  async processPaymentResult(params: PaymentResponseParams): Promise<void> {
+  async processPaymentResult(params: PaymentResponseParams) {
     try {
       const isValid = this.verifyResponse(params);
       if (!isValid) {
@@ -135,15 +136,33 @@ export class GpwebpayService {
       }
 
       if (PRCODE === '0' && SRCODE === '0') {
-        // Платеж успешен
+        return {
+          status: PaymentStatusResponse.SUCCESS,
+          message: RESULTTEXT,
+        };
       } else {
-        throw new Error(
-          `Payment failed with PRCODE: ${PRCODE}, SRCODE: ${SRCODE}, RESULTTEXT: ${RESULTTEXT}`,
-        );
+        const errorMessage = this.getErrorMessage(PRCODE, SRCODE, RESULTTEXT);
+        return { status: PaymentStatusResponse.FAILURE, message: errorMessage };
       }
     } catch (error) {
       console.error('Payment processing error:', error);
       throw error;
+    }
+  }
+
+  private getErrorMessage(
+    PRCODE: string,
+    SRCODE: string,
+    RESULTTEXT: string,
+  ): string {
+    if (PRCODE === '14') {
+      return 'Duplicate order number';
+    } else if (PRCODE === '54') {
+      return 'Expired card';
+    } else if (PRCODE === '57') {
+      return 'Transaction not permitted to cardholder';
+    } else {
+      return `Payment failed with PRCODE: ${PRCODE}, SRCODE: ${SRCODE}, RESULTTEXT: ${RESULTTEXT}`;
     }
   }
 }

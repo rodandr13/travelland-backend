@@ -1,16 +1,17 @@
 import { Injectable } from '@nestjs/common';
 
-import { PaymentStrategy } from './payment.strategy';
+import { PaymentInterfaceStrategy } from './payment.interface.strategy';
 import { PaymentDataDto } from '../payment.dto';
-import { PaymentResponseParams } from '../types';
+import { PaymentResponseParams, PaymentStatusResponse } from '../types';
 
 @Injectable()
-export class CashPaymentStrategy implements PaymentStrategy {
+export class CashPaymentStrategy implements PaymentInterfaceStrategy {
   async initiatePayment(paymentData: PaymentDataDto): Promise<void> {
     console.log(paymentData);
   }
 
-  async processPaymentResult(params: PaymentResponseParams): Promise<void> {
+  async processPaymentResult(params: PaymentResponseParams) {
     console.log(params);
+    return { status: PaymentStatusResponse.SUCCESS, message: 'Test' };
   }
 }

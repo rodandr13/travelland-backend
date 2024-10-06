@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpException,
-  HttpStatus,
-  Post,
-  Query,
-  Redirect,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Redirect } from '@nestjs/common';
 import { PaymentMethod } from '@prisma/client';
 
 import { PaymentDataDto } from './payment.dto';
@@ -18,22 +9,28 @@ export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
   @Post('initiate')
-  @Redirect()
   async initiatePayment(@Body() paymentData: PaymentDataDto) {
-    const url = await this.paymentService.initiatePayment(paymentData);
-    return { url };
+    return await this.paymentService.initiatePayment(paymentData);
   }
 
   @Get('return')
+  @Redirect()
   async handleReturn(@Query() query) {
     try {
-      await this.paymentService.processPaymentResult(PaymentMethod.CARD, query);
-      return 'Payment successful';
-    } catch (error: any) {
-      throw new HttpException(
-        `Payment failed: ${error.message}`,
-        HttpStatus.BAD_REQUEST,
+      const result = await this.paymentService.processPaymentResult(
+        PaymentMethod.CARD,
+        query,
       );
+      const { status, message } = result;
+      const encodedMessage = encodeURIComponent(message);
+      return {
+        url: `https://traventico.com/payment-result?status=${status}&message=${encodedMessage}`,
+      };
+    } catch {
+      const errorMessage = encodeURIComponent('An unexpected error occurred');
+      return {
+        url: `https://traventico.com/payment-result?status=failure&message=${errorMessage}`,
+      };
     }
   }
 }

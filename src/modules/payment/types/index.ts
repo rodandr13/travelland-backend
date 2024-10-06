@@ -34,3 +34,13 @@ export type PaymentResponseWithoutDigest = Omit<
 export enum GPWebPayOperations {
   CREATE_ORDER = 'CREATE_ORDER',
 }
+
+export enum PaymentStatusResponse {
+  SUCCESS = 'success',
+  FAILURE = 'failure',
+}
+
+export type PaymentResultResponse = {
+  status: PaymentStatusResponse;
+  message: string;
+};
