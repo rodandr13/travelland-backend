@@ -15,6 +15,7 @@ import {
   ServiceType,
 } from '@prisma/client';
 import { parseISO } from 'date-fns';
+import { performance } from 'perf_hooks';
 import { v4 as uuidv4 } from 'uuid';
 
 import { CreateOrderDTO } from './dto/create-order.dto';
@@ -54,19 +55,20 @@ export class OrderService {
   }
 
   private async createPayment(
-    prisma: Prisma.TransactionClient,
     order: Order,
     paymentMethod: PaymentMethod,
     totalOrderCurrentPrice: Prisma.Decimal,
     email: string,
   ) {
+    const paymentStartTime = performance.now();
+
     if (paymentMethod === PaymentMethod.CARD) {
       const amountInCentsDecimal = totalOrderCurrentPrice.mul(100);
       const amountInCents = amountInCentsDecimal
         .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
         .toNumber();
 
-      const payment = await prisma.payment.create({
+      const payment = await this.prisma.payment.create({
         data: {
           order: {
             connect: { id: order.id },
@@ -79,15 +81,25 @@ export class OrderService {
       const paymentData: PaymentDataDto = {
         paymentMethod: PaymentMethod.CARD,
         orderNumber: Number(order.id),
-        paymentNumber: payment.id,
+        paymentNumber: payment.transaction_id,
         email: email,
         amount: amountInCents,
       };
 
       const paymentUrl = await this.paymentService.initiatePayment(paymentData);
 
+      const paymentEndTime = performance.now();
+      this.logger.log(
+        `Время выполнения createPayment (CARD): ${paymentEndTime - paymentStartTime} ms`,
+      );
+
       return { paymentUrl };
     } else if (paymentMethod === PaymentMethod.CASH) {
+      const paymentEndTime = performance.now();
+      this.logger.log(
+        `Время выполнения createPayment (CASH): ${paymentEndTime - paymentStartTime} ms`,
+      );
+
       return { message: 'Заказ создан. Ожидается оплата наличными.' };
     } else {
       throw new BadRequestException('Неподдерживаемый метод оплаты.');
@@ -95,6 +107,7 @@ export class OrderService {
   }
 
   async createOrder(createOrderDTO: CreateOrderDTO) {
+    const totalStartTime = performance.now();
     const { user, orderServices, paymentMethod } = createOrderDTO;
 
     if (!user || !orderServices || !paymentMethod) {
@@ -117,130 +130,175 @@ export class OrderService {
       );
     }
 
-    return this.prisma.$transaction(async (prisma) => {
-      let existingUser = await this.userService.getByEmail(user.email);
+    const userStartTime = performance.now();
+    let existingUser = await this.userService.getByEmail(user.email);
 
-      if (!existingUser) {
-        existingUser = await this.userService.create({
-          email: user.email,
-          firstName: 'Tourist',
-          password: 'randomPassword',
-        });
-        // TODO: Уведомить пользователя о создании аккаунта и предоставить инструкции по установке пароля
-      }
+    if (!existingUser) {
+      existingUser = await this.userService.create({
+        email: user.email,
+        firstName: 'Tourist',
+        password: 'randomPassword',
+      });
+      // TODO: Уведомить пользователя о создании аккаунта и предоставить инструкции по установке пароля
+    }
+    const userEndTime = performance.now();
+    this.logger.log(
+      `Время получения/создания пользователя: ${userEndTime - userStartTime} ms`,
+    );
 
-      let totalOrderBasePrice = new Prisma.Decimal(0);
-      let totalOrderCurrentPrice = new Prisma.Decimal(0);
+    let totalOrderBasePrice = new Prisma.Decimal(0);
+    let totalOrderCurrentPrice = new Prisma.Decimal(0);
 
-      const orderServicesData = await Promise.all(
-        orderServices.map(async (service) => {
-          const { basePrices, currentPrices } =
-            await this.sanityService.getExcursionPrices(
-              service.id,
-              service.date,
+    const servicesStartTime = performance.now();
+    const orderServicesData = await Promise.all(
+      orderServices.map(async (service) => {
+        const pricesStartTime = performance.now();
+        const { basePrices, currentPrices } =
+          await this.sanityService.getExcursionPrices(service.id, service.date);
+        const pricesEndTime = performance.now();
+        this.logger.log(
+          `Время вызова getExcursionPrices для услуги ${service.id}: ${
+            pricesEndTime - pricesStartTime
+          } ms`,
+        );
+
+        const servicePriceData = service.participants.map((participant) => {
+          const basePriceValue = basePrices.find(
+            (price) => participant.category === price.categoryId,
+          )?.price;
+          const currentPriceValue = currentPrices.find(
+            (price) => participant.category === price.categoryId,
+          )?.price;
+
+          if (basePriceValue === undefined || currentPriceValue === undefined) {
+            throw new BadRequestException(
+              `Цена не найдена для категории ${participant.category}`,
             );
+          }
 
-          const servicePriceData = service.participants.map((participant) => {
-            const basePriceValue = basePrices.find(
-              (price) => participant.category === price.categoryId,
-            )?.price;
-            const currentPriceValue = currentPrices.find(
-              (price) => participant.category === price.categoryId,
-            )?.price;
+          const basePrice = new Prisma.Decimal(basePriceValue);
+          const currentPrice = new Prisma.Decimal(currentPriceValue);
 
-            if (
-              basePriceValue === undefined ||
-              currentPriceValue === undefined
-            ) {
-              throw new BadRequestException(
-                `Цена не найдена для категории ${participant.category}`,
-              );
-            }
-
-            const basePrice = new Prisma.Decimal(basePriceValue);
-            const currentPrice = new Prisma.Decimal(currentPriceValue);
-
-            const quantity = participant.count;
-            const totalBasePrice = basePrice.mul(quantity);
-            const totalCurrentPrice = currentPrice.mul(quantity);
-
-            return {
-              category_title: participant.title,
-              price_type: participant.category,
-              base_price: basePrice,
-              current_price: currentPrice,
-              quantity: quantity,
-              total_base_price: totalBasePrice,
-              total_current_price: totalCurrentPrice,
-            };
-          });
-
-          const totalServiceBasePrice = servicePriceData.reduce(
-            (sum, price) => sum.add(price.total_base_price),
-            new Prisma.Decimal(0),
-          );
-          const totalServiceCurrentPrice = servicePriceData.reduce(
-            (sum, price) => sum.add(price.total_current_price),
-            new Prisma.Decimal(0),
-          );
-
-          totalOrderBasePrice = totalOrderBasePrice.add(totalServiceBasePrice);
-          totalOrderCurrentPrice = totalOrderCurrentPrice.add(
-            totalServiceCurrentPrice,
-          );
+          const quantity = participant.count;
+          const totalBasePrice = basePrice.mul(quantity);
+          const totalCurrentPrice = currentPrice.mul(quantity);
 
           return {
-            service_id: service.id,
-            service_title: service.title,
-            slug: service.slug,
-            image_src: service.image_src,
-            image_lqip: service.image_lqip,
-            service_type: service.type as ServiceType,
-            date: parseISO(service.date),
-            time: service.time,
-            total_base_price: totalServiceBasePrice,
-            total_current_price: totalServiceCurrentPrice,
-            service_prices: {
-              create: servicePriceData,
-            },
+            category_title: participant.title,
+            price_type: participant.category,
+            base_price: basePrice,
+            current_price: currentPrice,
+            quantity: quantity,
+            total_base_price: totalBasePrice,
+            total_current_price: totalCurrentPrice,
           };
-        }),
-      );
-
-      const order = await prisma.order.create({
-        data: {
-          user: {
-            connect: { id: existingUser.id },
-          },
-          order_number: uuidv4(),
-          payment_method: paymentMethodEnum,
-          order_status: OrderStatus.PENDING,
-          email_status: NotificationStatus.NOT_SENT,
-          telegram_status: NotificationStatus.NOT_SENT,
-          total_base_price: totalOrderBasePrice,
-          total_current_price: totalOrderCurrentPrice,
-          discount_amount: totalOrderBasePrice.sub(totalOrderCurrentPrice),
-          order_services: {
-            create: orderServicesData,
-          },
-        },
-      });
-
-      this.logger.log(`Order created with ID: ${order.id}`);
-
-      this.notificationService
-        .sendOrderNotification(telegramClientId, createOrderDTO)
-        .catch((error) => {
-          this.logger.error('Не удалось отправить уведомление о заказе', error);
         });
 
-      return await this.createPayment(
-        prisma,
-        order,
-        paymentMethodEnum,
-        totalOrderCurrentPrice,
-        existingUser.email,
-      );
+        const totalServiceBasePrice = servicePriceData.reduce(
+          (sum, price) => sum.add(price.total_base_price),
+          new Prisma.Decimal(0),
+        );
+        const totalServiceCurrentPrice = servicePriceData.reduce(
+          (sum, price) => sum.add(price.total_current_price),
+          new Prisma.Decimal(0),
+        );
+
+        totalOrderBasePrice = totalOrderBasePrice.add(totalServiceBasePrice);
+        totalOrderCurrentPrice = totalOrderCurrentPrice.add(
+          totalServiceCurrentPrice,
+        );
+
+        return {
+          service_id: service.id,
+          service_title: service.title,
+          slug: service.slug,
+          image_src: service.image_src,
+          image_lqip: service.image_lqip,
+          service_type: service.type as ServiceType,
+          date: parseISO(service.date),
+          time: service.time,
+          total_base_price: totalServiceBasePrice,
+          total_current_price: totalServiceCurrentPrice,
+          service_prices: {
+            create: servicePriceData,
+          },
+        };
+      }),
+    );
+    const servicesEndTime = performance.now();
+    this.logger.log(
+      `Время обработки orderServicesData: ${
+        servicesEndTime - servicesStartTime
+      } ms`,
+    );
+
+    const transactionStartTime = performance.now();
+    const order = await this.prisma.order.create({
+      data: {
+        user: {
+          connect: { id: existingUser.id },
+        },
+        order_number: uuidv4(),
+        payment_method: paymentMethodEnum,
+        order_status: OrderStatus.PENDING,
+        email_status: NotificationStatus.NOT_SENT,
+        telegram_status: NotificationStatus.NOT_SENT,
+        total_base_price: totalOrderBasePrice,
+        total_current_price: totalOrderCurrentPrice,
+        discount_amount: totalOrderBasePrice.sub(totalOrderCurrentPrice),
+        order_services: {
+          create: orderServicesData,
+        },
+      },
     });
+    const transactionEndTime = performance.now();
+    this.logger.log(
+      `Время выполнения транзакции: ${
+        transactionEndTime - transactionStartTime
+      } ms`,
+    );
+
+    this.logger.log(`Order created with ID: ${order.id}`);
+
+    const notificationStartTime = performance.now();
+
+    this.notificationService
+      .sendOrderNotification(telegramClientId, createOrderDTO)
+      .then(() => {
+        const notificationEndTime = performance.now();
+        this.logger.log(
+          `Время отправки уведомления: ${
+            notificationEndTime - notificationStartTime
+          } ms`,
+        );
+      })
+      .catch((error) => {
+        const notificationEndTime = performance.now();
+        this.logger.error('Не удалось отправить уведомление о заказе', error);
+        this.logger.log(
+          `Время отправки уведомления (с ошибкой): ${
+            notificationEndTime - notificationStartTime
+          } ms`,
+        );
+      });
+
+    const paymentStartTime = performance.now();
+    const paymentResult = await this.createPayment(
+      order,
+      paymentMethodEnum,
+      totalOrderCurrentPrice,
+      existingUser.email,
+    );
+    const paymentEndTime = performance.now();
+    this.logger.log(
+      `Время создания платежа: ${paymentEndTime - paymentStartTime} ms`,
+    );
+
+    const totalEndTime = performance.now();
+    this.logger.log(
+      `Общее время выполнения createOrder: ${totalEndTime - totalStartTime} ms`,
+    );
+
+    return paymentResult;
   }
 }

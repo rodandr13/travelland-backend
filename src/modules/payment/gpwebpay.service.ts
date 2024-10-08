@@ -1,12 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PaymentStatus } from '@prisma/client';
 
 import {
   CURRENCY,
   DEPOSIT_FLAG,
   GP_WEB_PAY_FIELD_ORDER,
   PAYMENT_METHOD,
-  PRCODE_MESSAGES,
   SIGN_KEYS,
 } from './gpwebpay.config';
 import { PaymentDataDto } from './payment.dto';
@@ -15,9 +15,9 @@ import {
   PaymentParams,
   PaymentResponseParams,
   PaymentResponseWithoutDigest,
-  PaymentStatusResponse,
 } from './types';
 import { GPWebPayUtils } from './utils/gpwebpay.utils';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class GpwebpayService {
@@ -27,6 +27,7 @@ export class GpwebpayService {
   private readonly gpPassphrase: string;
 
   constructor(
+    private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
     @Inject('PRIVATE_KEY') private readonly privateKey: string,
     @Inject('PUBLIC_KEY') private readonly publicKey: string,
@@ -124,45 +125,45 @@ export class GpwebpayService {
   }
 
   async processPaymentResult(params: PaymentResponseParams) {
-    try {
-      const isValid = this.verifyResponse(params);
-      if (!isValid) {
-        throw new Error('Invalid response signature');
-      }
-
-      const { PRCODE, SRCODE, RESULTTEXT } = params;
-
-      if (PRCODE === PRCODE_MESSAGES.DUPLICATE_ORDER_NUMBER) {
-      }
-
-      if (PRCODE === '0' && SRCODE === '0') {
-        return {
-          status: PaymentStatusResponse.SUCCESS,
-          message: RESULTTEXT,
-        };
-      } else {
-        const errorMessage = this.getErrorMessage(PRCODE, SRCODE, RESULTTEXT);
-        return { status: PaymentStatusResponse.FAILURE, message: errorMessage };
-      }
-    } catch (error) {
-      console.error('Payment processing error:', error);
-      throw error;
+    const isValid = this.verifyResponse(params);
+    if (!isValid) {
+      throw new Error('Invalid response signature');
     }
+    const { PRCODE, SRCODE, RESULTTEXT } = params;
+    const isPaymentSuccess = PRCODE === '0' && SRCODE === '0';
+    const { token } = await this.updateReturnPayment(
+      Number(params.ORDERNUMBER),
+      PRCODE,
+      SRCODE,
+      isPaymentSuccess ? PaymentStatus.PAID : PaymentStatus.UNPAID,
+      RESULTTEXT,
+    );
+    console.log(token);
+    return {
+      token,
+    };
   }
 
-  private getErrorMessage(
-    PRCODE: string,
-    SRCODE: string,
-    RESULTTEXT: string,
-  ): string {
-    if (PRCODE === '14') {
-      return 'Duplicate order number';
-    } else if (PRCODE === '54') {
-      return 'Expired card';
-    } else if (PRCODE === '57') {
-      return 'Transaction not permitted to cardholder';
-    } else {
-      return `Payment failed with PRCODE: ${PRCODE}, SRCODE: ${SRCODE}, RESULTTEXT: ${RESULTTEXT}`;
-    }
+  private async updateReturnPayment(
+    transaction_id: number,
+    prcode: string,
+    srcode: string,
+    status: PaymentStatus,
+    result_text: string,
+  ) {
+    return this.prismaService.payment.update({
+      where: {
+        transaction_id,
+      },
+      data: {
+        prcode,
+        srcode,
+        status,
+        result_text,
+      },
+      select: {
+        token: true,
+      },
+    });
   }
 }

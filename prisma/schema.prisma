@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  // shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 model User {
@@ -205,6 +205,7 @@ model Payment {
   updated_at     DateTime @updatedAt
   order_id       Int
   transaction_id Int      @unique @default(autoincrement())
+  token          String?  @unique @default(cuid())
   prcode         String?
   srcode         String?
   result_text    String?

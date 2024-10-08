@@ -3,6 +3,7 @@ import { PaymentMethod } from '@prisma/client';
 
 import { PaymentDataDto } from './payment.dto';
 import { PaymentService } from './payment.service';
+import { PaymentResponseParams } from './types';
 
 @Controller('payment')
 export class PaymentController {
@@ -15,22 +16,13 @@ export class PaymentController {
 
   @Get('return')
   @Redirect()
-  async handleReturn(@Query() query) {
-    try {
-      const result = await this.paymentService.processPaymentResult(
-        PaymentMethod.CARD,
-        query,
-      );
-      const { status, message } = result;
-      const encodedMessage = encodeURIComponent(message);
-      return {
-        url: `https://traventico.com/payment-result?status=${status}&message=${encodedMessage}`,
-      };
-    } catch {
-      const errorMessage = encodeURIComponent('An unexpected error occurred');
-      return {
-        url: `https://traventico.com/payment-result?status=failure&message=${errorMessage}`,
-      };
-    }
+  async handleReturn(@Query() query: PaymentResponseParams) {
+    const { token } = await this.paymentService.processPaymentResult(
+      PaymentMethod.CARD,
+      query,
+    );
+    return {
+      url: `https://traventico.com/payment?token=${token}`,
+    };
   }
 }

@@ -41,6 +41,5 @@ export enum PaymentStatusResponse {
 }
 
 export type PaymentResultResponse = {
-  status: PaymentStatusResponse;
-  message: string;
+  token: string;
 };
