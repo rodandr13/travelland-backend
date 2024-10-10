@@ -18,3 +18,8 @@ export class PaymentDataDto {
   @IsString()
   email?: string;
 }
+
+export class PaymentTokenDto {
+  @IsString()
+  token: string;
+}

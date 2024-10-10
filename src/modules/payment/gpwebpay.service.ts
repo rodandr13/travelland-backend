@@ -9,7 +9,7 @@ import {
   PAYMENT_METHOD,
   SIGN_KEYS,
 } from './gpwebpay.config';
-import { PaymentDataDto } from './payment.dto';
+import { PaymentDataDto } from './dto/payment.dto';
 import {
   GPWebPayOperations,
   PaymentParams,

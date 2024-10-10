@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 import { PaymentInterfaceStrategy } from './payment.interface.strategy';
-import { PaymentDataDto } from '../payment.dto';
+import { PaymentDataDto } from '../dto/payment.dto';
 import { PaymentResponseParams } from '../types';
 
 @Injectable()

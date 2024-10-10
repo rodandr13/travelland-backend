@@ -21,7 +21,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { CreateOrderDTO } from './dto/create-order.dto';
 import { SanityService } from '../external/sanity/sanity.service';
 import { NotificationService } from '../notification/notification.service';
-import { PaymentDataDto } from '../payment/payment.dto';
+import { PaymentDataDto } from '../payment/dto/payment.dto';
 import { PaymentService } from '../payment/payment.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserService } from '../user/user.service';

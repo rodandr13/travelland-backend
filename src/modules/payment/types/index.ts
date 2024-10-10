@@ -35,10 +35,11 @@ export enum GPWebPayOperations {
   CREATE_ORDER = 'CREATE_ORDER',
 }
 
-export enum PaymentStatusResponse {
-  SUCCESS = 'success',
-  FAILURE = 'failure',
-}
+export type PaymentStatusResponse = {
+  orderId: number;
+  message: string;
+  status: string;
+};
 
 export type PaymentResultResponse = {
   token: string;

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { PaymentInterfaceStrategy } from './payment.interface.strategy';
 import { GpwebpayService } from '../gpwebpay.service';
-import { PaymentDataDto } from '../payment.dto';
+import { PaymentDataDto } from '../dto/payment.dto';
 import { PaymentResponseParams, PaymentResultResponse } from '../types';
 
 @Injectable()

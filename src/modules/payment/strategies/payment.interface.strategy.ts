@@ -1,4 +1,4 @@
-import { PaymentDataDto } from '../payment.dto';
+import { PaymentDataDto } from '../dto/payment.dto';
 import { PaymentResponseParams, PaymentResultResponse } from '../types';
 
 export interface PaymentInterfaceStrategy {
