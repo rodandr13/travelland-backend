@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
@@ -25,11 +25,13 @@ model User {
   refresh_token String?
 
   agency_id               Int?
-  agency                  Agency?        @relation(fields: [agency_id], references: [id])
+  agency                  Agency?              @relation(fields: [agency_id], references: [id])
   orders                  Order[]
   roles                   UserRole[]
   order_histories         OrderHistory[]
-  order_histories_changed OrderHistory[] @relation("OrderHistoryChangedBy")
+  order_histories_changed OrderHistory[]       @relation("OrderHistoryChangedBy")
+  preliminary_bookings    PreliminaryBooking[]
+  cart                    Cart?
 
   @@map("users")
 }
@@ -108,7 +110,7 @@ model Order {
   cancelled_at DateTime?
   completed_at DateTime?
 
-  order_status    OrderStatus        @default(PENDING)
+  order_status    OrderStatus
   email_status    NotificationStatus
   telegram_status NotificationStatus
   payment_method  PaymentMethod?
@@ -116,12 +118,12 @@ model Order {
   cancellation_reason String?
   comments            String?
 
-  discount_amount Decimal
+  discount_amount Decimal   @db.Decimal(10, 2)
   currency        Currency  @default(EUR)
   due_date        DateTime?
 
-  total_base_price    Decimal
-  total_current_price Decimal
+  total_base_price    Decimal @db.Decimal(10, 2)
+  total_current_price Decimal @db.Decimal(10, 2)
 
   user_id Int
   user    User @relation(fields: [user_id], references: [id])
@@ -132,6 +134,8 @@ model Order {
   order_services  OrderServices[]
   payments        Payment[]
   order_histories OrderHistory[]
+
+  preliminary_booking PreliminaryBooking?
 
   @@index([order_status])
   @@index([user_id])
@@ -152,8 +156,8 @@ model OrderServices {
   image_src     String?
   image_lqip    String?
 
-  total_base_price    Decimal
-  total_current_price Decimal
+  total_base_price    Decimal @db.Decimal(10, 2)
+  total_current_price Decimal @db.Decimal(10, 2)
 
   service_prices OrderServicePrice[]
 
@@ -171,11 +175,12 @@ model OrderHistory {
   order      Order    @relation(fields: [order_id], references: [id])
 
   status          OrderStatus
+  previous_status OrderStatus
   changed_at      DateTime    @default(now())
   changed_by      Int
   changed_by_user User        @relation("OrderHistoryChangedBy", fields: [changed_by], references: [id])
-  User            User?       @relation(fields: [userId], references: [id])
-  userId          Int?
+  user            User?       @relation(fields: [user_id], references: [id])
+  user_id         Int?
 
   @@map("order_histories")
 }
@@ -185,13 +190,13 @@ model OrderServicePrice {
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
   price_type     String
-  base_price     Decimal
-  current_price  Decimal
+  base_price     Decimal  @db.Decimal(10, 2)
+  current_price  Decimal  @db.Decimal(10, 2)
   quantity       Int
   category_title String
 
-  total_base_price    Decimal
-  total_current_price Decimal
+  total_base_price    Decimal @db.Decimal(10, 2)
+  total_current_price Decimal @db.Decimal(10, 2)
 
   order_service_id Int
   order_service    OrderServices @relation(fields: [order_service_id], references: [id])
@@ -211,9 +216,11 @@ model Payment {
   result_text    String?
   order          Order    @relation(fields: [order_id], references: [id])
 
-  amount Decimal
-  status PaymentStatus @default(UNPAID)
+  amount              Decimal             @db.Decimal(10, 2)
+  status              PaymentStatus       @default(UNPAID)
+  preliminary_booking PreliminaryBooking?
 
+  @@index([order_id, status])
   @@map("payments")
 }
 
@@ -221,12 +228,69 @@ model PromoCode {
   code       String   @id
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  discount   Decimal
+  discount   Decimal  @db.Decimal(10, 2)
   expires_at DateTime
   is_active  Boolean  @default(true)
   orders     Order[]
 
   @@map("promo_codes")
+}
+
+model PreliminaryBooking {
+  id         Int           @id @default(autoincrement())
+  created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
+  expires_at DateTime
+  status     BookingStatus
+  order_id   Int?          @unique
+  order      Order?        @relation(fields: [order_id], references: [id])
+  payment_id Int?          @unique
+  payment    Payment?      @relation(fields: [payment_id], references: [id])
+  user_id    Int
+  user       User          @relation(fields: [user_id], references: [id])
+  cart_items CartItem[]
+
+  @@index([user_id, status])
+  @@index([expires_at])
+  @@map("preliminary_bookings")
+}
+
+model Cart {
+  id         Int        @id @default(autoincrement())
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+  user_id    Int        @unique
+  user       User       @relation(fields: [user_id], references: [id])
+  cart_items CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id                     Int                 @id @default(autoincrement())
+  created_at             DateTime            @default(now())
+  updated_at             DateTime            @updatedAt
+  service_id             String
+  service_type           ServiceType
+  quantity               Int
+  preliminary_booking_id Int?
+  preliminary_booking    PreliminaryBooking? @relation(fields: [preliminary_booking_id], references: [id])
+  cart_id                Int
+  cart                   Cart                @relation(fields: [cart_id], references: [id])
+
+  @@map("cart_items")
+}
+
+model SystemSettings {
+  id          Int              @id @default(autoincrement())
+  key         String           @unique
+  value       String
+  description String?
+  created_at  DateTime         @default(now())
+  updated_at  DateTime         @updatedAt
+  value_type  SettingValueType
+
+  @@map("system_settings")
 }
 
 enum RoleName {
@@ -237,10 +301,11 @@ enum RoleName {
 }
 
 enum OrderStatus {
-  PENDING
   CONFIRMED
-  CANCELLED
+  PROCESSING
   COMPLETED
+  CANCELLED
+  REFUNDED
 }
 
 enum NotificationStatus {
@@ -272,4 +337,20 @@ enum ServiceType {
   TOUR
   TRANSFER
   EXCURSION
+}
+
+enum BookingStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  EXPIRED
+}
+
+enum SettingValueType {
+  STRING
+  INTEGER
+  FLOAT
+  BOOLEAN
+  JSON
 }

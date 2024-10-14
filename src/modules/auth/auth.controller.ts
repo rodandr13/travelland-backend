@@ -41,17 +41,13 @@ export class AuthController {
 
     try {
       const userId = this.jwtService.verify(accessToken).id;
-      // Возвращаем данные пользователя
-      const user = await this.userService.getById(userId);
-      return user;
+      return await this.userService.getById(userId);
     } catch (error: any) {
-      // Если токен недействителен или истёк
       if (error.name === 'TokenExpiredError') {
         throw new UnauthorizedException('Срок действия токена истёк');
       } else if (error.name === 'JsonWebTokenError') {
         throw new UnauthorizedException('Недействительный токен');
       }
-      // Для других ошибок
       throw new UnauthorizedException('Ошибка авторизации');
     }
   }
@@ -69,7 +65,7 @@ export class AuthController {
       path: '/',
       domain: process.env.COOKIE_DOMAIN || 'localhost',
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
     });
 
     response.clearCookie('refreshToken', {
@@ -77,10 +73,9 @@ export class AuthController {
       path: '/',
       domain: process.env.COOKIE_DOMAIN || 'localhost',
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
     });
 
-    // Явно возвращаем ответ с завершением запроса
     return response.status(200).json({ message: 'Logged out successfully' });
   }
 
