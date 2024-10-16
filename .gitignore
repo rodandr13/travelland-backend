@@ -62,3 +62,5 @@ nginx.conf
 docker-compose.yml
 
 *.pem
+
+Dockerfile.nginx
