@@ -51,7 +51,6 @@ model Session {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
   expires_at    DateTime
-  access_token  String   @unique
   refresh_token String   @unique
   user_id       Int
   user          User     @relation(fields: [user_id], references: [id])

@@ -6,14 +6,16 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { getJwtConfig } from '../config/jwt.config';
+import { SessionModule } from '../session/session.module';
 import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
     UserModule,
     ConfigModule,
+    SessionModule,
     JwtModule.registerAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule, SessionModule],
       inject: [ConfigService],
       useFactory: getJwtConfig,
     }),

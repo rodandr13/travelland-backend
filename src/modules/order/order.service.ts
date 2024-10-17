@@ -240,7 +240,7 @@ export class OrderService {
         },
         order_number: uuidv4(),
         payment_method: paymentMethodEnum,
-        order_status: OrderStatus.PENDING,
+        order_status: OrderStatus.PROCESSING,
         email_status: NotificationStatus.NOT_SENT,
         telegram_status: NotificationStatus.NOT_SENT,
         total_base_price: totalOrderBasePrice,
