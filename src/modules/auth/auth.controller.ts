@@ -6,24 +6,21 @@ import {
   Req,
   Res,
   UnauthorizedException,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 
 import { AuthService } from './auth.service';
+import { CurrentUser } from './decorators/user.decorator';
 import { AuthDto } from './dto/auth.dto';
 import { TokenInterceptor } from '../../interceptors/token.interceptor';
 import { CreateUserDto } from '../user/dto/create-user.dto';
-import { UserService } from '../user/user.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly jwtService: JwtService,
-    private readonly userService: UserService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   @UseInterceptors(TokenInterceptor)
   @Post('login')
@@ -31,25 +28,10 @@ export class AuthController {
     return await this.authService.login(dto);
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Get('me')
-  async getMe(@Req() req: Request) {
-    const accessToken = req.cookies['accessToken'];
-
-    if (!accessToken) {
-      throw new UnauthorizedException('Необходима авторизация');
-    }
-
-    try {
-      const userId = this.jwtService.verify(accessToken).id;
-      return await this.userService.getById(userId);
-    } catch (error: any) {
-      if (error.name === 'TokenExpiredError') {
-        throw new UnauthorizedException('Срок действия токена истёк');
-      } else if (error.name === 'JsonWebTokenError') {
-        throw new UnauthorizedException('Недействительный токен');
-      }
-      throw new UnauthorizedException('Ошибка авторизации');
-    }
+  async getMe(@CurrentUser() user) {
+    return user;
   }
 
   @UseInterceptors(TokenInterceptor)

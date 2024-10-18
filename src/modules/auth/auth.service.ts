@@ -4,8 +4,6 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
 import { AuthDto } from './dto/auth.dto';
@@ -14,22 +12,22 @@ import { UserService } from '../user/user.service';
 import { AuthResponse, TokenResponse } from './response/auth.response';
 import { PrismaService } from '../prisma/prisma.service';
 import { SessionService } from '../session/session.service';
+import { TokenService } from '../token/token.service';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
-    private readonly jwt: JwtService,
     private readonly userService: UserService,
-    private readonly configService: ConfigService,
     private readonly prismaService: PrismaService,
     private readonly sessionService: SessionService,
+    private readonly tokenService: TokenService,
   ) {}
 
   async login(dto: AuthDto): Promise<AuthResponse> {
     const user = await this.validate(dto);
-    const tokens = await this.issueTokens(user.id);
+    const tokens = await this.tokenService.issueTokens(user.id);
 
     await this.sessionService.createSession(user.id, tokens.refreshToken);
 
@@ -50,7 +48,7 @@ export class AuthService {
       );
     }
     const user = await this.userService.create(dto);
-    const tokens = await this.issueTokens(user.id);
+    const tokens = await this.tokenService.issueTokens(user.id);
 
     await this.sessionService.createSession(user.id, tokens.refreshToken);
 
@@ -61,20 +59,6 @@ export class AuthService {
       email: user.email,
       phone_number: user.phone_number,
     };
-  }
-
-  private async issueTokens(userId: number) {
-    const data = { id: userId, iat: Math.floor(Date.now() / 1000) };
-    const accessToken = this.jwt.sign(data, {
-      expiresIn:
-        this.configService.get<string>('JWT_ACCESS_EXPIRES_IN') || '30m',
-    });
-    const refreshToken = this.jwt.sign(data, {
-      expiresIn:
-        this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d',
-    });
-
-    return { accessToken, refreshToken };
   }
 
   private async validate(dto: AuthDto) {
@@ -100,6 +84,14 @@ export class AuthService {
   }
 
   async getNewToken(refreshToken: string): Promise<TokenResponse> {
+    const tokenData =
+      await this.tokenService.validateRefreshToken(refreshToken);
+    if (!tokenData) {
+      throw new UnauthorizedException(
+        'Недействительный или истёкший refresh токен',
+      );
+    }
+
     const session =
       await this.sessionService.getSessionByRefreshToken(refreshToken);
 
@@ -120,7 +112,7 @@ export class AuthService {
       );
     }
 
-    const tokens = await this.issueTokens(session.user_id);
+    const tokens = await this.tokenService.issueTokens(session.user_id);
 
     await this.sessionService.updateSession(refreshToken, tokens.refreshToken);
 
@@ -128,6 +120,15 @@ export class AuthService {
   }
 
   async logout(refreshToken: string): Promise<void> {
+    const tokenData =
+      await this.tokenService.validateRefreshToken(refreshToken);
+
+    if (!tokenData) {
+      throw new UnauthorizedException(
+        'Недействительный или истёкший refresh токен',
+      );
+    }
+
     await this.sessionService.invalidateSession(refreshToken);
   }
 

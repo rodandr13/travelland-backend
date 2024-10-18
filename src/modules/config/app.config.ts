@@ -1,6 +1,7 @@
 export default () => ({
   jwt: {
-    secret: process.env.JWT_SECRET || 'defaultSecret',
+    secretAccess: process.env.JWT_ACCESS_SECRET || 'defaultSecret',
+    secretRefresh: process.env.JWT_REFRESH_SECRET || 'defaultRefreshSecret',
     accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '30m',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },

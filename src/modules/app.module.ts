@@ -11,6 +11,7 @@ import { OrderModule } from './order/order.module';
 import { PaymentModule } from './payment/payment.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SessionModule } from './session/session.module';
+import { TokenModule } from './token/token.module';
 import { UserModule } from './user/user.module';
 
 @Module({
@@ -24,6 +25,7 @@ import { UserModule } from './user/user.module';
     NotificationModule,
     PaymentModule,
     SessionModule,
+    TokenModule,
   ],
   controllers: [AppController],
   providers: [AppService],
