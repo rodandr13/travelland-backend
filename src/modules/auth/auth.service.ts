@@ -39,13 +39,16 @@ export class AuthService {
   }
 
   async register(dto: CreateUserDto): Promise<AuthResponse> {
-    const isExists = await this.userService.getByEmail(dto.email);
+    const [isExists, user] = await Promise.all([
+      this.userService.getByEmail(dto.email),
+      this.userService.create(dto),
+    ]);
+
     if (isExists) {
       throw new BadRequestException(
         'Пользователь с таким email уже существует',
       );
     }
-    const user = await this.userService.create(dto);
 
     return this.generateAuthResponse(user);
   }

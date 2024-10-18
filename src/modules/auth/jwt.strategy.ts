@@ -41,8 +41,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user) {
       throw new UnauthorizedException('Пользователь не найден');
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+
+    return {
+      id: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      phone_number: user.phone_number,
+      is_active: user.is_active,
+    };
   }
 }

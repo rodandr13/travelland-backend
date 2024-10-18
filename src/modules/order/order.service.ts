@@ -131,7 +131,9 @@ export class OrderService {
     }
 
     const userStartTime = performance.now();
-    let existingUser = await this.userService.getByEmail(user.email);
+    let existingUser = await this.userService.getByEmailWithoutPassword(
+      user.email,
+    );
 
     if (!existingUser) {
       existingUser = await this.userService.create({
