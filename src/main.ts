@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import * as cookieParser from 'cookie-parser';
 
+import { AllExceptionsFilter } from './filters/all-exceptions.filter';
 import { AppModule } from './modules/app.module';
 
 const config = new ConfigService();
@@ -23,6 +24,7 @@ async function bootstrap() {
     origin: [config.get('CORS_URL_LOCAL'), config.get('CORS_URL_FRONT')],
     credentials: true,
   });
+  app.useGlobalFilters(new AllExceptionsFilter());
   await app.listen(4000);
 }
 

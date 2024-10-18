@@ -9,28 +9,33 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
-import { Request, Response } from 'express';
+import { CookieOptions, Request, Response } from 'express';
 
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/user.decorator';
 import { AuthDto } from './dto/auth.dto';
+import { UserResponse } from './response/auth.response';
 import { TokenInterceptor } from '../../interceptors/token.interceptor';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @UseInterceptors(TokenInterceptor)
   @Post('login')
   async login(@Body() dto: AuthDto) {
-    return await this.authService.login(dto);
+    return this.authService.login(dto);
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Get('me')
-  async getMe(@CurrentUser() user) {
+  async getMe(@CurrentUser() user: UserResponse) {
     return user;
   }
 
@@ -48,21 +53,11 @@ export class AuthController {
       await this.authService.logout(refreshToken);
     }
 
-    response.clearCookie('accessToken', {
-      httpOnly: true,
-      path: '/',
-      domain: process.env.COOKIE_DOMAIN || 'localhost',
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
-    });
+    const cookieOptions =
+      this.configService.get<CookieOptions>('cookieOptions');
 
-    response.clearCookie('refreshToken', {
-      httpOnly: true,
-      path: '/',
-      domain: process.env.COOKIE_DOMAIN || 'localhost',
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
-    });
+    response.clearCookie('accessToken', cookieOptions);
+    response.clearCookie('refreshToken', cookieOptions);
 
     return response.status(200).json({ message: 'Logged out successfully' });
   }

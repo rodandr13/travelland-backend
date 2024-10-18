@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -9,7 +10,13 @@ import * as bcrypt from 'bcrypt';
 import { AuthDto } from './dto/auth.dto';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { UserService } from '../user/user.service';
-import { AuthResponse, TokenResponse } from './response/auth.response';
+import {
+  AuthResponse,
+  TokenResponse,
+  UserResponse,
+} from './response/auth.response';
+import { InvalidSessionException } from '../../exceptions/invalid-session.exception';
+import { SessionExpiredException } from '../../exceptions/session-expired.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { SessionService } from '../session/session.service';
 import { TokenService } from '../token/token.service';
@@ -27,17 +34,8 @@ export class AuthService {
 
   async login(dto: AuthDto): Promise<AuthResponse> {
     const user = await this.validate(dto);
-    const tokens = await this.tokenService.issueTokens(user.id);
 
-    await this.sessionService.createSession(user.id, tokens.refreshToken);
-
-    return {
-      ...tokens,
-      id: user.id,
-      first_name: user.first_name,
-      email: user.email,
-      phone_number: user.phone_number,
-    };
+    return this.generateAuthResponse(user);
   }
 
   async register(dto: CreateUserDto): Promise<AuthResponse> {
@@ -48,17 +46,8 @@ export class AuthService {
       );
     }
     const user = await this.userService.create(dto);
-    const tokens = await this.tokenService.issueTokens(user.id);
 
-    await this.sessionService.createSession(user.id, tokens.refreshToken);
-
-    return {
-      ...tokens,
-      id: user.id,
-      first_name: user.first_name,
-      email: user.email,
-      phone_number: user.phone_number,
-    };
+    return this.generateAuthResponse(user);
   }
 
   private async validate(dto: AuthDto) {
@@ -96,25 +85,33 @@ export class AuthService {
       await this.sessionService.getSessionByRefreshToken(refreshToken);
 
     if (!session) {
-      throw new UnauthorizedException('Недействительный refresh токен');
+      throw new InvalidSessionException();
     }
 
     if (!session.is_active) {
-      throw new UnauthorizedException(
+      throw new InvalidSessionException(
         'Сессия деактивирована. Пожалуйста, выполните вход снова.',
       );
     }
 
     if (session.expires_at <= new Date()) {
       await this.sessionService.invalidateSession(refreshToken);
-      throw new UnauthorizedException(
-        'Срок действия сессии истек. Пожалуйста, выполните вход снова.',
-      );
+      throw new SessionExpiredException();
     }
 
     const tokens = await this.tokenService.issueTokens(session.user_id);
 
-    await this.sessionService.updateSession(refreshToken, tokens.refreshToken);
+    try {
+      await this.sessionService.updateSession(
+        refreshToken,
+        tokens.refreshToken,
+      );
+    } catch (error) {
+      this.logger.error('Ошибка при обновлении сессии', error);
+      throw new InternalServerErrorException(
+        'Не удалось обновить сессию. Пожалуйста, попробуйте снова.',
+      );
+    }
 
     return tokens;
   }
@@ -137,5 +134,20 @@ export class AuthService {
       where: { user_id: userId },
       data: { is_active: false },
     });
+  }
+
+  private async generateAuthResponse(
+    user: UserResponse,
+  ): Promise<AuthResponse> {
+    const tokens = await this.tokenService.issueTokens(user.id);
+    await this.sessionService.createSession(user.id, tokens.refreshToken);
+
+    return {
+      ...tokens,
+      id: user.id,
+      first_name: user.first_name,
+      email: user.email,
+      phone_number: user.phone_number,
+    };
   }
 }
