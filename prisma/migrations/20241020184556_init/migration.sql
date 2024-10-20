@@ -25,6 +25,9 @@ CREATE TYPE "BookingStatus" AS ENUM ('PENDING', 'PAID', 'FAILED', 'CANCELLED', '
 -- CreateEnum
 CREATE TYPE "SettingValueType" AS ENUM ('STRING', 'INTEGER', 'FLOAT', 'BOOLEAN', 'JSON');
 
+-- CreateEnum
+CREATE TYPE "CartStatus" AS ENUM ('ACTIVE', 'ORDERED', 'ABANDONED', 'EXPIRED');
+
 -- CreateTable
 CREATE TABLE "users" (
     "id" SERIAL NOT NULL,
@@ -232,6 +235,7 @@ CREATE TABLE "carts" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "deleted_at" TIMESTAMP(3),
+    "status" "CartStatus" NOT NULL DEFAULT 'ACTIVE',
     "user_id" INTEGER,
     "guest_session_id" TEXT,
 
@@ -245,8 +249,10 @@ CREATE TABLE "cart_items" (
     "updated_at" TIMESTAMP(3) NOT NULL,
     "service_id" TEXT NOT NULL,
     "service_type" "ServiceType" NOT NULL,
-    "quantity" INTEGER NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
+    "time" TEXT NOT NULL,
     "cart_id" INTEGER NOT NULL,
+    "cart_item_options" JSONB NOT NULL,
 
     CONSTRAINT "cart_items_pkey" PRIMARY KEY ("id")
 );
@@ -301,13 +307,16 @@ CREATE UNIQUE INDEX "payments_token_key" ON "payments"("token");
 CREATE INDEX "payments_order_id_status_idx" ON "payments"("order_id", "status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "carts_user_id_key" ON "carts"("user_id");
+CREATE INDEX "carts_user_id_idx" ON "carts"("user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "carts_guest_session_id_key" ON "carts"("guest_session_id");
+CREATE INDEX "carts_guest_session_id_idx" ON "carts"("guest_session_id");
 
 -- CreateIndex
 CREATE INDEX "cart_items_service_id_service_type_idx" ON "cart_items"("service_id", "service_type");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "cart_items_cart_id_service_id_service_type_date_time_key" ON "cart_items"("cart_id", "service_id", "service_type", "date", "time");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "system_settings_key_key" ON "system_settings"("key");

@@ -273,32 +273,20 @@ model Cart {
 }
 
 model CartItem {
-  id                Int              @id @default(autoincrement())
-  created_at        DateTime         @default(now())
-  updated_at        DateTime         @updatedAt
-  service_id        String
-  service_type      ServiceType
-  date              DateTime
-  time              String
-  cart_id           Int
-  cart              Cart             @relation(fields: [cart_id], references: [id])
-  cart_item_options CartItemOption[]
+  id           Int         @id @default(autoincrement())
+  created_at   DateTime    @default(now())
+  updated_at   DateTime    @updatedAt
+  service_id   String
+  service_type ServiceType
+  date         DateTime
+  time         String
+  cart_id      Int
+  cart         Cart        @relation(fields: [cart_id], references: [id])
+  options      Json
 
   @@unique([cart_id, service_id, service_type, date, time])
   @@index([service_id, service_type])
   @@map("cart_items")
-}
-
-model CartItemOption {
-  id           Int      @id @default(autoincrement())
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
-  price_type   String
-  quantity     Int
-  cart_item_id Int
-  cart_item    CartItem @relation(fields: [cart_item_id], references: [id])
-
-  @@map("cart_item_options")
 }
 
 model SystemSettings {

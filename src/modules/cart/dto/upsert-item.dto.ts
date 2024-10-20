@@ -8,9 +8,9 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-import { AddItemOptionDto } from './add-item-option.dto';
+import { ItemOptionDto } from './item-option.dto';
 
-export class AddItemDto {
+export class UpsertItemDto {
   @IsString()
   serviceId: string;
 
@@ -18,13 +18,13 @@ export class AddItemDto {
   serviceType: ServiceType;
 
   @IsDateString()
-  date: string;
+  date: Date;
 
   @IsString()
   time: string;
 
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => AddItemOptionDto)
-  options: AddItemOptionDto[];
+  @Type(() => ItemOptionDto)
+  options: ItemOptionDto[];
 }

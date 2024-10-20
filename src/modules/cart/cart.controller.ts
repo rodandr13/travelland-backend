@@ -6,10 +6,9 @@ import {
   Post,
   Req,
 } from '@nestjs/common';
-import { response } from 'express';
 
 import { CartService } from './cart.service';
-import { AddItemDto } from './dto/add-item.dto';
+import { UpsertItemDto } from './dto/upsert-item.dto';
 
 @Controller('cart')
 export class CartController {
@@ -18,8 +17,7 @@ export class CartController {
   @Get()
   async getCart(@Req() req) {
     const userId = req.user?.id;
-    const sessionId = req.cookies['get_session_id'];
-
+    const sessionId = req.cookies['guest_session_id'];
     try {
       return await this.cartService.getActiveCart(userId, sessionId);
     } catch (error) {
@@ -33,12 +31,11 @@ export class CartController {
     }
   }
 
-  @Post()
-  async addItem(@Body() addItemDto: AddItemDto, @Req() req) {
+  @Post('items')
+  async addItem(@Body() addItemDto: UpsertItemDto, @Req() req) {
     const userId = req.user?.id;
-    const sessionId = req.cookies['get_session_id'];
-
-    await this.cartService.addItem(addItemDto, userId, sessionId);
-    return response.status(200).json({ message: 'Товар добавлен в корзину' });
+    const sessionId = req.cookies['guest_session_id'];
+    await this.cartService.upsertItem(addItemDto, userId, sessionId);
+    return { message: 'Товар добавлен в корзину' };
   }
 }
