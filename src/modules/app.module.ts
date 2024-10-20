@@ -13,6 +13,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { SessionModule } from './session/session.module';
 import { TokenModule } from './token/token.module';
 import { UserModule } from './user/user.module';
+import { CartModule } from './cart/cart.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { UserModule } from './user/user.module';
     PaymentModule,
     SessionModule,
     TokenModule,
+    CartModule,
   ],
   controllers: [AppController],
   providers: [AppService],

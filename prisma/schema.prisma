@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider          = "postgresql"
-  url               = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
   // shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
@@ -12,6 +12,7 @@ model User {
   id            Int       @id @default(autoincrement())
   created_at    DateTime  @default(now())
   updated_at    DateTime  @updatedAt
+  deleted_at    DateTime?
   last_login    DateTime?
   email         String    @unique
   first_name    String?
@@ -24,21 +25,23 @@ model User {
   sessions      Session[]
 
   agency_id               Int?
-  agency                  Agency?              @relation(fields: [agency_id], references: [id])
+  agency                  Agency?        @relation(fields: [agency_id], references: [id])
   orders                  Order[]
   roles                   UserRole[]
   order_histories         OrderHistory[]
-  order_histories_changed OrderHistory[]       @relation("OrderHistoryChangedBy")
-  preliminary_bookings    PreliminaryBooking[]
-  cart                    Cart?
+  order_histories_changed OrderHistory[] @relation("OrderHistoryChangedBy")
+  carts                   Cart[]
+  Payment                 Payment[]
 
+  @@index([email])
   @@map("users")
 }
 
 model Agency {
-  id          Int      @id @default(autoincrement())
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  id          Int       @id @default(autoincrement())
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  deleted_at  DateTime?
   name        String
   description String?
   users       User[]
@@ -123,6 +126,7 @@ model Order {
   paid_at      DateTime?
   cancelled_at DateTime?
   completed_at DateTime?
+  deleted_at   DateTime?
 
   order_status    OrderStatus
   email_status    NotificationStatus
@@ -148,8 +152,6 @@ model Order {
   order_services  OrderServices[]
   payments        Payment[]
   order_histories OrderHistory[]
-
-  preliminary_booking PreliminaryBooking?
 
   @@index([order_status])
   @@index([user_id])
@@ -178,6 +180,7 @@ model OrderServices {
   order_id Int
   order    Order @relation(fields: [order_id], references: [id])
 
+  @@index([service_id, service_type])
   @@map("order_services")
 }
 
@@ -219,80 +222,83 @@ model OrderServicePrice {
 }
 
 model Payment {
-  id             Int      @id @default(autoincrement())
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  id             Int       @id @default(autoincrement())
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+  deleted_at     DateTime?
   order_id       Int
-  transaction_id Int      @unique @default(autoincrement())
-  token          String?  @unique @default(cuid())
+  transaction_id Int       @unique @default(autoincrement())
+  token          String?   @unique @default(cuid())
   prcode         String?
   srcode         String?
   result_text    String?
-  order          Order    @relation(fields: [order_id], references: [id])
+  order          Order     @relation(fields: [order_id], references: [id])
+  user_id        Int
+  user           User      @relation(fields: [user_id], references: [id])
 
-  amount              Decimal             @db.Decimal(10, 2)
-  status              PaymentStatus       @default(UNPAID)
-  preliminary_booking PreliminaryBooking?
+  amount Decimal       @db.Decimal(10, 2)
+  status PaymentStatus @default(UNPAID)
 
   @@index([order_id, status])
   @@map("payments")
 }
 
 model PromoCode {
-  code       String   @id
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  discount   Decimal  @db.Decimal(10, 2)
+  code       String    @id
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+  discount   Decimal   @db.Decimal(10, 2)
   expires_at DateTime
-  is_active  Boolean  @default(true)
+  is_active  Boolean   @default(true)
   orders     Order[]
 
   @@map("promo_codes")
 }
 
-model PreliminaryBooking {
-  id         Int           @id @default(autoincrement())
-  created_at DateTime      @default(now())
-  updated_at DateTime      @updatedAt
-  expires_at DateTime
-  status     BookingStatus
-  order_id   Int?          @unique
-  order      Order?        @relation(fields: [order_id], references: [id])
-  payment_id Int?          @unique
-  payment    Payment?      @relation(fields: [payment_id], references: [id])
-  user_id    Int
-  user       User          @relation(fields: [user_id], references: [id])
-  cart_items CartItem[]
-
-  @@index([user_id, status])
-  @@index([expires_at])
-  @@map("preliminary_bookings")
-}
-
 model Cart {
-  id         Int        @id @default(autoincrement())
-  created_at DateTime   @default(now())
-  updated_at DateTime   @updatedAt
-  user_id    Int        @unique
-  user       User       @relation(fields: [user_id], references: [id])
-  cart_items CartItem[]
+  id               Int        @id @default(autoincrement())
+  created_at       DateTime   @default(now())
+  updated_at       DateTime   @updatedAt
+  deleted_at       DateTime?
+  status           CartStatus @default(ACTIVE)
+  user_id          Int?
+  guest_session_id String?
+  user             User?      @relation(fields: [user_id], references: [id])
+  cart_items       CartItem[]
 
+  @@index([user_id])
+  @@index([guest_session_id])
   @@map("carts")
 }
 
 model CartItem {
-  id                     Int                 @id @default(autoincrement())
-  created_at             DateTime            @default(now())
-  updated_at             DateTime            @updatedAt
-  service_id             String
-  service_type           ServiceType
-  quantity               Int
-  preliminary_booking_id Int?
-  preliminary_booking    PreliminaryBooking? @relation(fields: [preliminary_booking_id], references: [id])
-  cart_id                Int
-  cart                   Cart                @relation(fields: [cart_id], references: [id])
+  id                Int              @id @default(autoincrement())
+  created_at        DateTime         @default(now())
+  updated_at        DateTime         @updatedAt
+  service_id        String
+  service_type      ServiceType
+  date              DateTime
+  time              String
+  cart_id           Int
+  cart              Cart             @relation(fields: [cart_id], references: [id])
+  cart_item_options CartItemOption[]
 
+  @@unique([cart_id, service_id, service_type, date, time])
+  @@index([service_id, service_type])
   @@map("cart_items")
+}
+
+model CartItemOption {
+  id           Int      @id @default(autoincrement())
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  price_type   String
+  quantity     Int
+  cart_item_id Int
+  cart_item    CartItem @relation(fields: [cart_item_id], references: [id])
+
+  @@map("cart_item_options")
 }
 
 model SystemSettings {
@@ -367,4 +373,11 @@ enum SettingValueType {
   FLOAT
   BOOLEAN
   JSON
+}
+
+enum CartStatus {
+  ACTIVE
+  ORDERED
+  ABANDONED
+  EXPIRED
 }

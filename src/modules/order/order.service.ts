@@ -10,7 +10,6 @@ import {
   Order,
   OrderStatus,
   PaymentMethod,
-  PaymentStatus,
   Prisma,
   ServiceType,
 } from '@prisma/client';
@@ -59,6 +58,7 @@ export class OrderService {
     paymentMethod: PaymentMethod,
     totalOrderCurrentPrice: Prisma.Decimal,
     email: string,
+    userId: number,
   ) {
     const paymentStartTime = performance.now();
 
@@ -73,8 +73,12 @@ export class OrderService {
           order: {
             connect: { id: order.id },
           },
+          user: {
+            connect: {
+              id: userId,
+            },
+          },
           amount: totalOrderCurrentPrice,
-          status: PaymentStatus.UNPAID,
         },
       });
 
@@ -290,6 +294,7 @@ export class OrderService {
       paymentMethodEnum,
       totalOrderCurrentPrice,
       existingUser.email,
+      existingUser.id,
     );
     const paymentEndTime = performance.now();
     this.logger.log(

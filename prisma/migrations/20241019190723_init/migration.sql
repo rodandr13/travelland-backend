@@ -30,6 +30,7 @@ CREATE TABLE "users" (
     "id" SERIAL NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
     "last_login" TIMESTAMP(3),
     "email" TEXT NOT NULL,
     "first_name" TEXT,
@@ -49,6 +50,7 @@ CREATE TABLE "agencies" (
     "id" SERIAL NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
     "name" TEXT NOT NULL,
     "description" TEXT,
 
@@ -61,7 +63,6 @@ CREATE TABLE "sessions" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "expires_at" TIMESTAMP(3) NOT NULL,
-    "access_token" TEXT NOT NULL,
     "refresh_token" TEXT NOT NULL,
     "user_id" INTEGER NOT NULL,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
@@ -123,6 +124,7 @@ CREATE TABLE "orders" (
     "paid_at" TIMESTAMP(3),
     "cancelled_at" TIMESTAMP(3),
     "completed_at" TIMESTAMP(3),
+    "deleted_at" TIMESTAMP(3),
     "order_status" "OrderStatus" NOT NULL,
     "email_status" "NotificationStatus" NOT NULL,
     "telegram_status" "NotificationStatus" NOT NULL,
@@ -197,12 +199,14 @@ CREATE TABLE "payments" (
     "id" SERIAL NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
     "order_id" INTEGER NOT NULL,
     "transaction_id" SERIAL NOT NULL,
     "token" TEXT,
     "prcode" TEXT,
     "srcode" TEXT,
     "result_text" TEXT,
+    "user_id" INTEGER NOT NULL,
     "amount" DECIMAL(10,2) NOT NULL,
     "status" "PaymentStatus" NOT NULL DEFAULT 'UNPAID',
 
@@ -214,6 +218,7 @@ CREATE TABLE "promo_codes" (
     "code" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
     "discount" DECIMAL(10,2) NOT NULL,
     "expires_at" TIMESTAMP(3) NOT NULL,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
@@ -222,25 +227,13 @@ CREATE TABLE "promo_codes" (
 );
 
 -- CreateTable
-CREATE TABLE "preliminary_bookings" (
-    "id" SERIAL NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-    "expires_at" TIMESTAMP(3) NOT NULL,
-    "status" "BookingStatus" NOT NULL,
-    "order_id" INTEGER,
-    "payment_id" INTEGER,
-    "user_id" INTEGER NOT NULL,
-
-    CONSTRAINT "preliminary_bookings_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "carts" (
     "id" SERIAL NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
-    "user_id" INTEGER NOT NULL,
+    "deleted_at" TIMESTAMP(3),
+    "user_id" INTEGER,
+    "guest_session_id" TEXT,
 
     CONSTRAINT "carts_pkey" PRIMARY KEY ("id")
 );
@@ -253,7 +246,6 @@ CREATE TABLE "cart_items" (
     "service_id" TEXT NOT NULL,
     "service_type" "ServiceType" NOT NULL,
     "quantity" INTEGER NOT NULL,
-    "preliminary_booking_id" INTEGER,
     "cart_id" INTEGER NOT NULL,
 
     CONSTRAINT "cart_items_pkey" PRIMARY KEY ("id")
@@ -276,7 +268,7 @@ CREATE TABLE "system_settings" (
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "sessions_access_token_key" ON "sessions"("access_token");
+CREATE INDEX "users_email_idx" ON "users"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "sessions_refresh_token_key" ON "sessions"("refresh_token");
@@ -297,6 +289,9 @@ CREATE INDEX "orders_order_status_idx" ON "orders"("order_status");
 CREATE INDEX "orders_user_id_idx" ON "orders"("user_id");
 
 -- CreateIndex
+CREATE INDEX "order_services_service_id_service_type_idx" ON "order_services"("service_id", "service_type");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "payments_transaction_id_key" ON "payments"("transaction_id");
 
 -- CreateIndex
@@ -306,19 +301,13 @@ CREATE UNIQUE INDEX "payments_token_key" ON "payments"("token");
 CREATE INDEX "payments_order_id_status_idx" ON "payments"("order_id", "status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "preliminary_bookings_order_id_key" ON "preliminary_bookings"("order_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "preliminary_bookings_payment_id_key" ON "preliminary_bookings"("payment_id");
-
--- CreateIndex
-CREATE INDEX "preliminary_bookings_user_id_status_idx" ON "preliminary_bookings"("user_id", "status");
-
--- CreateIndex
-CREATE INDEX "preliminary_bookings_expires_at_idx" ON "preliminary_bookings"("expires_at");
-
--- CreateIndex
 CREATE UNIQUE INDEX "carts_user_id_key" ON "carts"("user_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "carts_guest_session_id_key" ON "carts"("guest_session_id");
+
+-- CreateIndex
+CREATE INDEX "cart_items_service_id_service_type_idx" ON "cart_items"("service_id", "service_type");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "system_settings_key_key" ON "system_settings"("key");
@@ -366,19 +355,10 @@ ALTER TABLE "order_service_prices" ADD CONSTRAINT "order_service_prices_order_se
 ALTER TABLE "payments" ADD CONSTRAINT "payments_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "preliminary_bookings" ADD CONSTRAINT "preliminary_bookings_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "payments" ADD CONSTRAINT "payments_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "preliminary_bookings" ADD CONSTRAINT "preliminary_bookings_payment_id_fkey" FOREIGN KEY ("payment_id") REFERENCES "payments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "preliminary_bookings" ADD CONSTRAINT "preliminary_bookings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "carts" ADD CONSTRAINT "carts_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_preliminary_booking_id_fkey" FOREIGN KEY ("preliminary_booking_id") REFERENCES "preliminary_bookings"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "carts" ADD CONSTRAINT "carts_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_cart_id_fkey" FOREIGN KEY ("cart_id") REFERENCES "carts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
