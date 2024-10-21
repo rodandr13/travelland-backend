@@ -1,89 +1,109 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Cart, CartStatus } from '@prisma/client';
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
+import { Cart, CartStatus, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
-import { UpsertItemDto } from './dto/upsert-item.dto';
+import { AddItemDto } from './dto/add-item.dto';
+import { UpdateItemDto } from './dto/update-item.dto';
 
 @Injectable()
 export class CartService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async getActiveCart(userId?: number, sessionId?: string): Promise<Cart> {
-    if (!userId && !sessionId) {
-      throw new NotFoundException('Не найден пользователь или сессия');
-    }
-
-    let cart: Cart | null = null;
-
-    if (userId) {
-      cart = await this.prismaService.cart.findFirst({
-        where: {
-          user_id: userId,
-          status: CartStatus.ACTIVE,
-        },
-        include: {
-          cart_items: true,
-        },
-      });
-    } else if (sessionId) {
-      cart = await this.prismaService.cart.findFirst({
-        where: {
-          guest_session_id: sessionId,
-          status: CartStatus.ACTIVE,
-        },
-        include: {
-          cart_items: true,
-        },
-      });
-    }
-
-    if (!cart) {
-      throw new NotFoundException('Активная корзина не найдена');
-    }
-
-    return cart;
-  }
-
-  async upsertItem(
-    upsertItemDto: UpsertItemDto,
+  async addItem(
+    addItemDto: AddItemDto,
     userId?: number,
     sessionId?: string,
   ): Promise<void> {
     const cart = await this.getOrCreateActiveCart(userId, sessionId);
 
-    const optionsArray = upsertItemDto.options.map((option) => ({
+    const optionsArray = addItemDto.options.map((option) => ({
       priceType: option.priceType,
       quantity: option.quantity,
     }));
 
+    await this.prismaService.cartItem.create({
+      data: {
+        cart_id: cart.id,
+        service_id: addItemDto.serviceId,
+        service_type: addItemDto.serviceType,
+        date: addItemDto.date,
+        time: addItemDto.time,
+        options: optionsArray,
+      },
+    });
+  }
+
+  async updateItem(
+    cartItemId: number,
+    updateItemDto: UpdateItemDto,
+    userId?: number,
+    sessionId?: string,
+  ): Promise<void> {
+    const cart = await this.getOrCreateActiveCart(userId, sessionId);
+
     const existingItem = await this.prismaService.cartItem.findFirst({
       where: {
+        id: cartItemId,
         cart_id: cart.id,
-        service_id: upsertItemDto.serviceId,
-        service_type: upsertItemDto.serviceType,
-        date: upsertItemDto.date,
-        time: upsertItemDto.time,
       },
     });
 
-    if (existingItem) {
+    if (!existingItem) {
+      throw new NotFoundException('Элемент корзины не найден');
+    }
+
+    const duplicateItem = await this.prismaService.cartItem.findFirst({
+      where: {
+        cart_id: cart.id,
+        service_id: updateItemDto.serviceId,
+        service_type: updateItemDto.serviceType,
+        date: updateItemDto.date,
+        time: updateItemDto.time,
+        NOT: {
+          id: cartItemId,
+        },
+      },
+    });
+
+    if (duplicateItem) {
+      throw new ConflictException(
+        'Элемент с такими параметрами уже существует в корзине',
+      );
+    }
+
+    const optionsArray = updateItemDto.options.map((option) => ({
+      priceType: option.priceType,
+      quantity: option.quantity,
+    }));
+
+    try {
       await this.prismaService.cartItem.update({
-        where: { id: existingItem.id },
+        where: { id: cartItemId },
         data: {
+          service_id: updateItemDto.serviceId,
+          service_type: updateItemDto.serviceType,
+          date: updateItemDto.date,
+          time: updateItemDto.time,
           options: optionsArray,
         },
       });
-    } else {
-      await this.prismaService.cartItem.create({
-        data: {
-          cart_id: cart.id,
-          service_id: upsertItemDto.serviceId,
-          service_type: upsertItemDto.serviceType,
-          date: upsertItemDto.date,
-          time: upsertItemDto.time,
-          options: optionsArray,
-        },
-      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException(
+            'Невозможно обновить элемент корзины. Возможно, такой элемент уже существует.',
+          );
+        }
+      }
+      console.error('Ошибка при обновлении элемента корзины:', error);
+      throw new InternalServerErrorException(
+        'Произошла ошибка при обновлении элемента корзины',
+      );
     }
   }
 
@@ -92,7 +112,7 @@ export class CartService {
     userId?: number,
     sessionId?: string,
   ): Promise<void> {
-    const cart = await this.getActiveCart(userId, sessionId);
+    const cart = await this.getOrCreateActiveCart(userId, sessionId);
 
     const cartItem = await this.prismaService.cartItem.findFirst({
       where: {
@@ -111,7 +131,7 @@ export class CartService {
   }
 
   async clearCart(userId?: number, sessionId?: string): Promise<void> {
-    const cart = await this.getActiveCart(userId, sessionId);
+    const cart = await this.getOrCreateActiveCart(userId, sessionId);
 
     await this.prismaService.cartItem.deleteMany({
       where: {
@@ -188,10 +208,14 @@ export class CartService {
     }
   }
 
-  private async getOrCreateActiveCart(
+  async getOrCreateActiveCart(
     userId?: number,
     sessionId?: string,
   ): Promise<Cart> {
+    if (!userId && !sessionId) {
+      throw new Error('Не найден пользователь или сессия');
+    }
+
     let cart: Cart | null = null;
 
     if (userId) {
@@ -199,6 +223,9 @@ export class CartService {
         where: {
           user_id: userId,
           status: CartStatus.ACTIVE,
+        },
+        include: {
+          cart_items: true,
         },
       });
 
@@ -208,6 +235,9 @@ export class CartService {
             user_id: userId,
             status: CartStatus.ACTIVE,
           },
+          include: {
+            cart_items: true,
+          },
         });
       }
     } else if (sessionId) {
@@ -215,6 +245,9 @@ export class CartService {
         where: {
           guest_session_id: sessionId,
           status: CartStatus.ACTIVE,
+        },
+        include: {
+          cart_items: true,
         },
       });
 
@@ -224,10 +257,11 @@ export class CartService {
             guest_session_id: sessionId,
             status: CartStatus.ACTIVE,
           },
+          include: {
+            cart_items: true,
+          },
         });
       }
-    } else {
-      throw new Error('Не удалось идентифицировать корзину');
     }
 
     return cart;

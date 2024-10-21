@@ -10,7 +10,7 @@ import {
 
 import { ItemOptionDto } from './item-option.dto';
 
-export class UpsertItemDto {
+export class AddItemDto {
   @IsString()
   serviceId: string;
 
