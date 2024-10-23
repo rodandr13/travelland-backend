@@ -61,7 +61,6 @@ export class OrderService {
     userId: number,
   ) {
     const paymentStartTime = performance.now();
-
     if (paymentMethod === PaymentMethod.CARD) {
       const amountInCentsDecimal = totalOrderCurrentPrice.mul(100);
       const amountInCents = amountInCentsDecimal
@@ -112,9 +111,9 @@ export class OrderService {
 
   async createOrder(createOrderDTO: CreateOrderDTO) {
     const totalStartTime = performance.now();
-    const { user, orderServices, paymentMethod } = createOrderDTO;
-
-    if (!user || !orderServices || !paymentMethod) {
+    const { user, paymentMethod } = createOrderDTO;
+    const orderServices = [];
+    if (!user || !paymentMethod) {
       throw new BadRequestException(
         'Отсутствуют необходимые данные для заказа.',
       );

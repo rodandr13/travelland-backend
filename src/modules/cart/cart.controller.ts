@@ -9,16 +9,19 @@ import {
   Post,
   Put,
   Req,
+  UseGuards,
 } from '@nestjs/common';
-import { Cart } from '@prisma/client';
 import { Request } from 'express';
 
 import { CartService } from './cart.service';
 import { GuestSession } from './decorators/guest-session.decorator';
 import { AddItemDto } from './dto/add-item.dto';
+import { CartResponse } from './response/cart.response';
 import { CurrentUser } from '../auth/decorators/user.decorator';
+import { OptionalJwtGuard } from '../auth/guards/optional-jwt.guard';
 import { UserResponse } from '../auth/response/auth.response';
 
+@UseGuards(OptionalJwtGuard)
 @Controller('cart')
 export class CartController {
   constructor(private readonly cartService: CartService) {}
@@ -28,7 +31,7 @@ export class CartController {
   async getCart(
     @CurrentUser() user: UserResponse | undefined,
     @GuestSession() sessionId: string | undefined,
-  ): Promise<Cart> {
+  ): Promise<CartResponse> {
     try {
       return await this.cartService.getOrCreateActiveCart(user?.id, sessionId);
     } catch (error) {

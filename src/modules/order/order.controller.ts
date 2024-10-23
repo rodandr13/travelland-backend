@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Order } from '@prisma/client';
+import { Request } from 'express';
 
 import { CreateOrderDTO } from './dto/create-order.dto';
 import { OrderService } from './order.service';
@@ -17,7 +18,11 @@ export class OrderController {
   }
 
   @Post()
-  async createOrder(@Body() createOrderDto: CreateOrderDTO) {
+  async createOrder(
+    @Body() createOrderDto: CreateOrderDTO,
+    @Req() req: Request,
+  ) {
+    console.log(req.cookies);
     const result = await this.orderService.createOrder(createOrderDto);
     if (result.paymentUrl) {
       return {

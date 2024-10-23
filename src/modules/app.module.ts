@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { CartModule } from './cart/cart.module';
 import appConfig from './config/app.config';
 import { ExternalModule } from './external/external.module';
 import { NotificationModule } from './notification/notification.module';
@@ -13,7 +14,6 @@ import { PrismaModule } from './prisma/prisma.module';
 import { SessionModule } from './session/session.module';
 import { TokenModule } from './token/token.module';
 import { UserModule } from './user/user.module';
-import { CartModule } from './cart/cart.module';
 
 @Module({
   imports: [

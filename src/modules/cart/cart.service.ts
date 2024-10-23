@@ -4,14 +4,32 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Cart, CartStatus, Prisma } from '@prisma/client';
+import { CartStatus, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { AddItemDto } from './dto/add-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
+import { CartResponse } from './response/cart.response';
 
 @Injectable()
 export class CartService {
+  private readonly selectFields = {
+    id: true,
+    status: true,
+    user_id: true,
+    guest_session_id: true,
+    cart_items: {
+      select: {
+        id: true,
+        service_id: true,
+        service_type: true,
+        date: true,
+        time: true,
+        options: true,
+      },
+    },
+  } as const;
+
   constructor(private readonly prismaService: PrismaService) {}
 
   async addItem(
@@ -211,12 +229,11 @@ export class CartService {
   async getOrCreateActiveCart(
     userId?: number,
     sessionId?: string,
-  ): Promise<Cart> {
+  ): Promise<CartResponse> {
     if (!userId && !sessionId) {
       throw new Error('Не найден пользователь или сессия');
     }
-
-    let cart: Cart | null = null;
+    let cart: CartResponse | null = null;
 
     if (userId) {
       cart = await this.prismaService.cart.findFirst({
@@ -224,9 +241,7 @@ export class CartService {
           user_id: userId,
           status: CartStatus.ACTIVE,
         },
-        include: {
-          cart_items: true,
-        },
+        select: this.selectFields,
       });
 
       if (!cart) {
@@ -235,9 +250,7 @@ export class CartService {
             user_id: userId,
             status: CartStatus.ACTIVE,
           },
-          include: {
-            cart_items: true,
-          },
+          select: this.selectFields,
         });
       }
     } else if (sessionId) {
@@ -246,9 +259,7 @@ export class CartService {
           guest_session_id: sessionId,
           status: CartStatus.ACTIVE,
         },
-        include: {
-          cart_items: true,
-        },
+        select: this.selectFields,
       });
 
       if (!cart) {
@@ -257,9 +268,7 @@ export class CartService {
             guest_session_id: sessionId,
             status: CartStatus.ACTIVE,
           },
-          include: {
-            cart_items: true,
-          },
+          select: this.selectFields,
         });
       }
     }
