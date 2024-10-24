@@ -238,6 +238,8 @@ CREATE TABLE "carts" (
     "status" "CartStatus" NOT NULL DEFAULT 'ACTIVE',
     "user_id" INTEGER,
     "guest_session_id" TEXT,
+    "total_base_price" DECIMAL(10,2) NOT NULL,
+    "total_current_price" DECIMAL(10,2) NOT NULL,
 
     CONSTRAINT "carts_pkey" PRIMARY KEY ("id")
 );
@@ -252,9 +254,31 @@ CREATE TABLE "cart_items" (
     "date" TIMESTAMP(3) NOT NULL,
     "time" TEXT NOT NULL,
     "cart_id" INTEGER NOT NULL,
-    "cart_item_options" JSONB NOT NULL,
+    "title" TEXT NOT NULL,
+    "slug" TEXT,
+    "image_src" TEXT,
+    "image_lqip" TEXT,
+    "total_base_price" DECIMAL(10,2) NOT NULL,
+    "total_current_price" DECIMAL(10,2) NOT NULL,
 
     CONSTRAINT "cart_items_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "cart_item_options" (
+    "id" SERIAL NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "price_type" TEXT NOT NULL,
+    "base_price" DECIMAL(10,2) NOT NULL,
+    "current_price" DECIMAL(10,2) NOT NULL,
+    "quantity" INTEGER NOT NULL,
+    "category_title" TEXT NOT NULL,
+    "total_base_price" DECIMAL(10,2) NOT NULL,
+    "total_current_price" DECIMAL(10,2) NOT NULL,
+    "cart_item_id" INTEGER NOT NULL,
+
+    CONSTRAINT "cart_item_options_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -371,3 +395,6 @@ ALTER TABLE "carts" ADD CONSTRAINT "carts_user_id_fkey" FOREIGN KEY ("user_id") 
 
 -- AddForeignKey
 ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_cart_id_fkey" FOREIGN KEY ("cart_id") REFERENCES "carts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "cart_item_options" ADD CONSTRAINT "cart_item_options_cart_item_id_fkey" FOREIGN KEY ("cart_item_id") REFERENCES "cart_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

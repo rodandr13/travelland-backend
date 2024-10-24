@@ -257,15 +257,17 @@ model PromoCode {
 }
 
 model Cart {
-  id               Int        @id @default(autoincrement())
-  created_at       DateTime   @default(now())
-  updated_at       DateTime   @updatedAt
-  deleted_at       DateTime?
-  status           CartStatus @default(ACTIVE)
-  user_id          Int?
-  guest_session_id String?
-  user             User?      @relation(fields: [user_id], references: [id])
-  cart_items       CartItem[]
+  id                  Int        @id @default(autoincrement())
+  created_at          DateTime   @default(now())
+  updated_at          DateTime   @updatedAt
+  deleted_at          DateTime?
+  status              CartStatus @default(ACTIVE)
+  user_id             Int?
+  guest_session_id    String?
+  user                User?      @relation(fields: [user_id], references: [id])
+  total_base_price    Decimal    @default(0) @db.Decimal(10, 2)
+  total_current_price Decimal    @default(0) @db.Decimal(10, 2)
+  cart_items          CartItem[]
 
   @@index([user_id])
   @@index([guest_session_id])
@@ -273,20 +275,45 @@ model Cart {
 }
 
 model CartItem {
-  id           Int         @id @default(autoincrement())
-  created_at   DateTime    @default(now())
-  updated_at   DateTime    @updatedAt
-  service_id   String
-  service_type ServiceType
-  date         DateTime
-  time         String
-  cart_id      Int
-  cart         Cart        @relation(fields: [cart_id], references: [id])
-  options      Json
+  id                  Int              @id @default(autoincrement())
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @updatedAt
+  service_id          String
+  service_type        ServiceType
+  date                DateTime
+  time                String
+  cart_id             Int
+  cart                Cart             @relation(fields: [cart_id], references: [id])
+  title               String
+  slug                String?
+  image_src           String?
+  image_lqip          String?
+  total_base_price    Decimal          @default(0) @db.Decimal(10, 2)
+  total_current_price Decimal          @default(0) @db.Decimal(10, 2)
+  cart_item_options   CartItemOption[]
 
   @@unique([cart_id, service_id, service_type, date, time])
   @@index([service_id, service_type])
   @@map("cart_items")
+}
+
+model CartItemOption {
+  id             Int      @id @default(autoincrement())
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  price_type     String
+  base_price     Decimal  @default(0) @db.Decimal(10, 2)
+  current_price  Decimal  @default(0) @db.Decimal(10, 2)
+  quantity       Int
+  category_title String
+
+  total_base_price    Decimal @default(0) @db.Decimal(10, 2)
+  total_current_price Decimal @default(0) @db.Decimal(10, 2)
+
+  cart_item_id Int
+  cart_item    CartItem @relation(fields: [cart_item_id], references: [id])
+
+  @@map("cart_item_options")
 }
 
 model SystemSettings {

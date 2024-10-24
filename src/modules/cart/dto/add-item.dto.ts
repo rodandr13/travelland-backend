@@ -1,10 +1,12 @@
 import { ServiceType } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
-  IsArray,
   IsDateString,
   IsEnum,
+  IsNumber,
+  IsOptional,
   IsString,
+  Min,
   ValidateNested,
 } from 'class-validator';
 
@@ -23,8 +25,29 @@ export class AddItemDto {
   @IsString()
   time: string;
 
-  @IsArray()
+  @IsString()
+  title: string;
+
+  @IsString()
+  slug?: string;
+
+  @IsOptional()
+  @IsString()
+  image_src?: string;
+
+  @IsOptional()
+  @IsString()
+  image_lqip?: string;
+
+  @IsNumber()
+  @Min(0)
+  totalCurrentPrice: number;
+
+  @IsNumber()
+  @Min(0)
+  totalBasePrice: number;
+
   @ValidateNested({ each: true })
   @Type(() => ItemOptionDto)
-  options: ItemOptionDto[];
+  cartItemOptions: ItemOptionDto[];
 }

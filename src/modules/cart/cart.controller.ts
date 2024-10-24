@@ -16,7 +16,6 @@ import { Request } from 'express';
 import { CartService } from './cart.service';
 import { GuestSession } from './decorators/guest-session.decorator';
 import { AddItemDto } from './dto/add-item.dto';
-import { CartResponse } from './response/cart.response';
 import { CurrentUser } from '../auth/decorators/user.decorator';
 import { OptionalJwtGuard } from '../auth/guards/optional-jwt.guard';
 import { UserResponse } from '../auth/response/auth.response';
@@ -31,7 +30,7 @@ export class CartController {
   async getCart(
     @CurrentUser() user: UserResponse | undefined,
     @GuestSession() sessionId: string | undefined,
-  ): Promise<CartResponse> {
+  ) {
     try {
       return await this.cartService.getOrCreateActiveCart(user?.id, sessionId);
     } catch (error) {
@@ -49,21 +48,21 @@ export class CartController {
     await this.cartService.addItem(addItemDto, user?.id, sessionId);
   }
 
-  @Put('items/:itemId')
-  @HttpCode(HttpStatus.OK)
-  async updateItem(
-    @Param('itemId') itemId: number,
-    @Body() updateItemDto: AddItemDto,
-    @CurrentUser() user: UserResponse | undefined,
-    @GuestSession() sessionId: string | undefined,
-  ): Promise<void> {
-    await this.cartService.updateItem(
-      itemId,
-      updateItemDto,
-      user?.id,
-      sessionId,
-    );
-  }
+  // @Put('items/:itemId')
+  // @HttpCode(HttpStatus.OK)
+  // async updateItem(
+  //   @Param('itemId') itemId: number,
+  //   @Body() updateItemDto: AddItemDto,
+  //   @CurrentUser() user: UserResponse | undefined,
+  //   @GuestSession() sessionId: string | undefined,
+  // ): Promise<void> {
+  //   await this.cartService.updateItem(
+  //     itemId,
+  //     updateItemDto,
+  //     user?.id,
+  //     sessionId,
+  //   );
+  // }
 
   @Delete('items/:itemId')
   @HttpCode(HttpStatus.NO_CONTENT)
