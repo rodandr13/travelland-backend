@@ -298,14 +298,15 @@ model CartItem {
 }
 
 model CartItemOption {
-  id             Int      @id @default(autoincrement())
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
-  price_type     String
-  base_price     Decimal  @default(0) @db.Decimal(10, 2)
-  current_price  Decimal  @default(0) @db.Decimal(10, 2)
-  quantity       Int
-  category_title String
+  id                   Int      @id @default(autoincrement())
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+  price_type           String
+  base_price           Decimal  @default(0) @db.Decimal(10, 2)
+  current_price        Decimal  @default(0) @db.Decimal(10, 2)
+  quantity             Int
+  category_title       String
+  category_description String
 
   total_base_price    Decimal @default(0) @db.Decimal(10, 2)
   total_current_price Decimal @default(0) @db.Decimal(10, 2)

@@ -19,11 +19,6 @@ export class ItemOptionDto {
   @IsString()
   category_title: string;
 
-  @IsNumber()
-  @Min(0)
-  totalBasePrice: number;
-
-  @IsNumber()
-  @Min(0)
-  totalCurrentPrice: number;
+  @IsString()
+  category_description: string;
 }

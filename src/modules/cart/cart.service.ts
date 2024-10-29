@@ -10,6 +10,11 @@ import { CartStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AddItemDto } from './dto/add-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
+import { CartResponse } from './response/cart.response';
+import {
+  calculateCartItemTotals,
+  prepareCartItemOptions,
+} from './utils/price-calculations.util';
 
 @Injectable()
 export class CartService {
@@ -22,11 +27,14 @@ export class CartService {
     total_current_price: true,
     cart_items: {
       select: {
-        id: true,
         service_id: true,
         service_type: true,
         date: true,
         time: true,
+        slug: true,
+        title: true,
+        image_lqip: true,
+        image_src: true,
         total_base_price: true,
         total_current_price: true,
         cart_item_options: true,
@@ -45,6 +53,14 @@ export class CartService {
       const cart = await this.getOrCreateActiveCart(userId, sessionId);
 
       await this.prismaService.$transaction(async (tx) => {
+        const { totalBasePrice, totalCurrentPrice } = calculateCartItemTotals(
+          addItemDto.cartItemOptions,
+        );
+
+        const preparedOptions = prepareCartItemOptions({
+          options: addItemDto.cartItemOptions,
+        });
+
         await tx.cartItem.create({
           data: {
             cart_id: cart.id,
@@ -55,24 +71,12 @@ export class CartService {
             slug: addItemDto.slug,
             image_src: addItemDto.image_src,
             image_lqip: addItemDto.image_lqip,
-            total_current_price: new Prisma.Decimal(
-              addItemDto.totalCurrentPrice,
-            ),
-            total_base_price: new Prisma.Decimal(addItemDto.totalBasePrice),
+            total_current_price: totalCurrentPrice,
+            total_base_price: totalBasePrice,
             title: addItemDto.title,
             cart_item_options: {
               createMany: {
-                data: addItemDto.cartItemOptions.map((option) => ({
-                  price_type: option.price_type,
-                  base_price: option.base_price,
-                  current_price: option.current_price,
-                  quantity: option.quantity,
-                  category_title: option.category_title,
-                  total_base_price: new Prisma.Decimal(option.totalBasePrice),
-                  total_current_price: new Prisma.Decimal(
-                    option.totalCurrentPrice,
-                  ),
-                })),
+                data: preparedOptions,
               },
             },
           },
@@ -85,10 +89,10 @@ export class CartService {
           where: { id: cart.id },
           data: {
             total_base_price: {
-              increment: new Prisma.Decimal(addItemDto.totalBasePrice),
+              increment: totalBasePrice,
             },
             total_current_price: {
-              increment: new Prisma.Decimal(addItemDto.totalCurrentPrice),
+              increment: totalCurrentPrice,
             },
           },
         });
@@ -113,6 +117,15 @@ export class CartService {
       const cart = await this.getOrCreateActiveCart(userId, sessionId);
 
       await this.prismaService.$transaction(async (tx) => {
+        const { totalBasePrice, totalCurrentPrice } = calculateCartItemTotals(
+          updateItemDto.cartItemOptions,
+        );
+
+        const preparedOptions = prepareCartItemOptions({
+          options: updateItemDto.cartItemOptions,
+          cartItemId,
+        });
+
         const existingItem = await tx.cartItem.findFirst({
           where: {
             id: cartItemId,
@@ -153,10 +166,8 @@ export class CartService {
             service_type: updateItemDto.serviceType,
             date: updateItemDto.date,
             time: updateItemDto.time,
-            total_current_price: new Prisma.Decimal(
-              updateItemDto.totalCurrentPrice,
-            ),
-            total_base_price: new Prisma.Decimal(updateItemDto.totalBasePrice),
+            total_current_price: totalCurrentPrice,
+            total_base_price: totalBasePrice,
           },
         });
 
@@ -167,35 +178,22 @@ export class CartService {
         });
 
         await tx.cartItemOption.createMany({
-          data: updateItemDto.cartItemOptions.map((option) => ({
-            cart_item_id: cartItemId,
-            price_type: option.price_type,
-            base_price: option.base_price,
-            current_price: option.current_price,
-            quantity: option.quantity,
-            category_title: option.category_title,
-            total_base_price: new Prisma.Decimal(option.totalBasePrice),
-            total_current_price: new Prisma.Decimal(option.totalCurrentPrice),
-          })),
+          data: preparedOptions,
         });
 
         const priceDifference = {
-          base:
-            Number(new Prisma.Decimal(updateItemDto.totalBasePrice)) -
-            Number(existingItem.total_base_price),
-          current:
-            Number(new Prisma.Decimal(updateItemDto.totalCurrentPrice)) -
-            Number(existingItem.total_current_price),
+          base: totalBasePrice.sub(existingItem.total_base_price),
+          current: totalCurrentPrice.sub(existingItem.total_current_price),
         };
 
         await tx.cart.update({
           where: { id: cart.id },
           data: {
             total_base_price: {
-              increment: new Prisma.Decimal(priceDifference.base),
+              increment: priceDifference.base,
             },
             total_current_price: {
-              increment: new Prisma.Decimal(priceDifference.current),
+              increment: priceDifference.current,
             },
           },
         });
@@ -360,7 +358,10 @@ export class CartService {
   //   }
   // }
 
-  async getOrCreateActiveCart(userId?: number, sessionId?: string) {
+  async getOrCreateActiveCart(
+    userId?: number,
+    sessionId?: string,
+  ): Promise<CartResponse> {
     if (!userId && !sessionId) {
       throw new BadRequestException('Не найден пользователь или сессия');
     }
@@ -375,7 +376,6 @@ export class CartService {
           where: whereCondition,
           select: this.selectFields,
         });
-
         if (cart) {
           return cart;
         }

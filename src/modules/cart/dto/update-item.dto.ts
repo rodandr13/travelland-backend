@@ -5,10 +5,8 @@ import {
   IsArray,
   IsDateString,
   IsEnum,
-  IsNumber,
   IsOptional,
   IsString,
-  Min,
   ValidateNested,
 } from 'class-validator';
 
@@ -42,14 +40,6 @@ export class UpdateItemDto {
   @IsOptional()
   @IsString()
   image_lqip?: string;
-
-  @IsNumber()
-  @Min(0)
-  totalBasePrice: number;
-
-  @IsNumber()
-  @Min(0)
-  totalCurrentPrice: number;
 
   @IsArray()
   @ArrayMinSize(1)
