@@ -12,6 +12,7 @@ export class GuestSessionMiddleware implements NestMiddleware {
         secure: process.env.NODE_ENV === 'production',
         maxAge: 30 * 24 * 60 * 60 * 1000,
         sameSite: 'lax',
+        domain: process.env.COOKIE_DOMAIN || 'localhost',
       });
       req.cookies['guest_session_id'] = guestSessionId;
     }

@@ -22,14 +22,12 @@ export class CashPaymentStrategy implements PaymentInterfaceStrategy {
       },
     });
 
-    // Получаем cart_id из заказа
     const order = await this.prismaService.order.findUnique({
       where: { id: paymentData.orderNumber },
       select: { cart_id: true },
     });
     console.log(order?.cart_id);
 
-    // Если у заказа есть связанная корзина, обновляем её статус
     if (order?.cart_id) {
       await this.prismaService.cart.update({
         where: { id: order.cart_id },
