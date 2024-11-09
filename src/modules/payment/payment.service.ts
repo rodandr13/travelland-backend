@@ -33,6 +33,7 @@ export class PaymentService {
       email,
       amount: this.convertAmountToCents(totalAmount),
       token: payment.token,
+      cart_id: order.cart_id,
     };
     const strategy = this.strategyFactory.getStrategy(
       paymentData.paymentMethod,

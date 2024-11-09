@@ -167,7 +167,6 @@ export class GpwebpayService {
             where: { id: orderId },
             select: { cart_id: true },
           });
-
           // Если у заказа есть связанная корзина, обновляем её статус
           if (order?.cart_id) {
             await prisma.cart.update({

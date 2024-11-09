@@ -20,6 +20,9 @@ export class PaymentDataDto {
 
   @IsString()
   token: string;
+
+  @IsNumber()
+  cart_id: number;
 }
 
 export class PaymentTokenDto {
