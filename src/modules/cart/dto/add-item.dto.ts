@@ -12,10 +12,10 @@ import { ItemOptionDto } from './item-option.dto';
 
 export class AddItemDto {
   @IsString()
-  serviceId: string;
+  service_id: string;
 
   @IsEnum(ServiceType)
-  serviceType: ServiceType;
+  service_type: ServiceType;
 
   @IsDateString()
   date: Date;
@@ -39,5 +39,5 @@ export class AddItemDto {
 
   @ValidateNested({ each: true })
   @Type(() => ItemOptionDto)
-  cartItemOptions: ItemOptionDto[];
+  cart_item_options: ItemOptionDto[];
 }

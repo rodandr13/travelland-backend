@@ -1,3 +1,5 @@
+import { PaymentMethod } from '@prisma/client';
+
 export type PaymentParams = {
   [key: string]: string;
 };
@@ -36,11 +38,18 @@ export enum GPWebPayOperations {
 }
 
 export type PaymentStatusResponse = {
-  orderId: number;
+  order_id: number;
   message: string;
   status: string;
+  result_text: string;
+  payment_method: PaymentMethod;
 };
 
 export type PaymentResultResponse = {
   token: string;
+};
+
+export type PaymentInitiateResponse = {
+  token?: string;
+  url?: string;
 };

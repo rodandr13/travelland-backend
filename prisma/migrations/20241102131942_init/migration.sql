@@ -238,8 +238,8 @@ CREATE TABLE "carts" (
     "status" "CartStatus" NOT NULL DEFAULT 'ACTIVE',
     "user_id" INTEGER,
     "guest_session_id" TEXT,
-    "total_base_price" DECIMAL(10,2) NOT NULL,
-    "total_current_price" DECIMAL(10,2) NOT NULL,
+    "total_base_price" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "total_current_price" DECIMAL(10,2) NOT NULL DEFAULT 0,
 
     CONSTRAINT "carts_pkey" PRIMARY KEY ("id")
 );
@@ -258,8 +258,8 @@ CREATE TABLE "cart_items" (
     "slug" TEXT,
     "image_src" TEXT,
     "image_lqip" TEXT,
-    "total_base_price" DECIMAL(10,2) NOT NULL,
-    "total_current_price" DECIMAL(10,2) NOT NULL,
+    "total_base_price" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "total_current_price" DECIMAL(10,2) NOT NULL DEFAULT 0,
 
     CONSTRAINT "cart_items_pkey" PRIMARY KEY ("id")
 );
@@ -270,12 +270,14 @@ CREATE TABLE "cart_item_options" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "price_type" TEXT NOT NULL,
-    "base_price" DECIMAL(10,2) NOT NULL,
-    "current_price" DECIMAL(10,2) NOT NULL,
+    "base_price" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "current_price" DECIMAL(10,2) NOT NULL DEFAULT 0,
     "quantity" INTEGER NOT NULL,
     "category_title" TEXT NOT NULL,
-    "total_base_price" DECIMAL(10,2) NOT NULL,
-    "total_current_price" DECIMAL(10,2) NOT NULL,
+    "category_description" TEXT NOT NULL,
+    "category_id" TEXT NOT NULL,
+    "total_base_price" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "total_current_price" DECIMAL(10,2) NOT NULL DEFAULT 0,
     "cart_item_id" INTEGER NOT NULL,
 
     CONSTRAINT "cart_item_options_pkey" PRIMARY KEY ("id")
@@ -370,10 +372,10 @@ ALTER TABLE "orders" ADD CONSTRAINT "orders_user_id_fkey" FOREIGN KEY ("user_id"
 ALTER TABLE "orders" ADD CONSTRAINT "orders_promo_code_id_fkey" FOREIGN KEY ("promo_code_id") REFERENCES "promo_codes"("code") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "order_services" ADD CONSTRAINT "order_services_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "order_services" ADD CONSTRAINT "order_services_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "order_histories" ADD CONSTRAINT "order_histories_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "order_histories" ADD CONSTRAINT "order_histories_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "order_histories" ADD CONSTRAINT "order_histories_changed_by_fkey" FOREIGN KEY ("changed_by") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -382,7 +384,7 @@ ALTER TABLE "order_histories" ADD CONSTRAINT "order_histories_changed_by_fkey" F
 ALTER TABLE "order_histories" ADD CONSTRAINT "order_histories_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "order_service_prices" ADD CONSTRAINT "order_service_prices_order_service_id_fkey" FOREIGN KEY ("order_service_id") REFERENCES "order_services"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "order_service_prices" ADD CONSTRAINT "order_service_prices_order_service_id_fkey" FOREIGN KEY ("order_service_id") REFERENCES "order_services"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "payments" ADD CONSTRAINT "payments_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -397,4 +399,4 @@ ALTER TABLE "carts" ADD CONSTRAINT "carts_user_id_fkey" FOREIGN KEY ("user_id") 
 ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_cart_id_fkey" FOREIGN KEY ("cart_id") REFERENCES "carts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "cart_item_options" ADD CONSTRAINT "cart_item_options_cart_item_id_fkey" FOREIGN KEY ("cart_item_id") REFERENCES "cart_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "cart_item_options" ADD CONSTRAINT "cart_item_options_cart_item_id_fkey" FOREIGN KEY ("cart_item_id") REFERENCES "cart_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;

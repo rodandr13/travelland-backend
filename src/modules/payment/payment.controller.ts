@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, Query, Redirect } from '@nestjs/common';
 import { PaymentMethod } from '@prisma/client';
 
-import { PaymentDataDto, PaymentTokenDto } from './dto/payment.dto';
+import { PaymentTokenDto } from './dto/payment.dto';
 import { PaymentService } from './payment.service';
 import { PaymentResponseParams } from './types';
 
@@ -9,10 +9,10 @@ import { PaymentResponseParams } from './types';
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
-  @Post('initiate')
-  async initiatePayment(@Body() paymentData: PaymentDataDto) {
-    return await this.paymentService.initiatePayment(paymentData);
-  }
+  // @Post('initiate')
+  // async initiatePayment(@Body() paymentData: PaymentDataDto) {
+  //   return await this.paymentService.initiatePayment(paymentData);
+  // }
 
   @Post('status')
   async paymentStatus(@Body() tokenDto: PaymentTokenDto) {

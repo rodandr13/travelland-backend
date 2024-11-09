@@ -21,4 +21,7 @@ export class ItemOptionDto {
 
   @IsString()
   category_description: string;
+
+  @IsString()
+  category_id: string;
 }

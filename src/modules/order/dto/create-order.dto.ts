@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   ValidateNested,
@@ -13,6 +14,9 @@ export class CreateOrderDTO {
   @ValidateNested()
   @Type(() => UserDTO)
   user: UserDTO;
+
+  @IsNumber()
+  cartId: number;
 
   @IsString()
   @IsOptional()

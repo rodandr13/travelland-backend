@@ -1,16 +1,13 @@
 import { ValidationPipe } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import * as cookieParser from 'cookie-parser';
 
 import { AllExceptionsFilter } from './filters/all-exceptions.filter';
 import { AppModule } from './modules/app.module';
 
-const config = new ConfigService();
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('backend');
   app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({
@@ -21,7 +18,12 @@ async function bootstrap() {
     }),
   );
   app.enableCors({
-    origin: [config.get('CORS_URL_LOCAL'), config.get('CORS_URL_FRONT')],
+    origin: [
+      'https://travelland-frontend-fpkv.vercel.app',
+      'http://localhost:3000',
+      'http://localhost:4000',
+      'https://traventico.com',
+    ],
     credentials: true,
   });
   app.useGlobalFilters(new AllExceptionsFilter());

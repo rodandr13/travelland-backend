@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'node:fs';
 
+import { CashPaymentService } from './cash-payment.service';
 import { GpwebpayService } from './gpwebpay.service';
 import { PaymentController } from './payment.controller';
 import { PaymentService } from './payment.service';
@@ -32,6 +33,7 @@ import { CashPaymentStrategy } from './strategies/cash-payment.strategy';
     PaymentStrategyFactory,
     CardPaymentStrategy,
     CashPaymentStrategy,
+    CashPaymentService,
   ],
   controllers: [PaymentController],
   exports: [PaymentService],

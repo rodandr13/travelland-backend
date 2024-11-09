@@ -14,10 +14,10 @@ import { ItemOptionDto } from './item-option.dto';
 
 export class UpdateItemDto {
   @IsString()
-  serviceId: string;
+  service_id: string;
 
   @IsEnum(ServiceType)
-  serviceType: ServiceType;
+  service_type: ServiceType;
 
   @IsDateString()
   @Type(() => Date)
@@ -45,5 +45,5 @@ export class UpdateItemDto {
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => ItemOptionDto)
-  cartItemOptions: ItemOptionDto[];
+  cart_item_options: ItemOptionDto[];
 }

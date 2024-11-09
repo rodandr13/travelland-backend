@@ -1,8 +1,14 @@
 import { PaymentDataDto } from '../dto/payment.dto';
-import { PaymentResponseParams, PaymentResultResponse } from '../types';
+import {
+  PaymentInitiateResponse,
+  PaymentResponseParams,
+  PaymentResultResponse,
+} from '../types';
 
 export interface PaymentInterfaceStrategy {
-  initiatePayment(paymentData: PaymentDataDto): Promise<string | void>;
+  initiatePayment(
+    paymentData: PaymentDataDto,
+  ): Promise<PaymentInitiateResponse>;
 
   processPaymentResult(
     params: PaymentResponseParams,

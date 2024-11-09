@@ -17,6 +17,9 @@ export class PaymentDataDto {
   @IsOptional()
   @IsString()
   email?: string;
+
+  @IsString()
+  token: string;
 }
 
 export class PaymentTokenDto {

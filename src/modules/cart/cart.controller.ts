@@ -32,7 +32,6 @@ export class CartController {
     @CurrentUser() user: UserResponse | undefined,
     @GuestSession() sessionId: string | undefined,
   ): Promise<CartResponse> {
-    console.log('getCart');
     try {
       return await this.cartService.getOrCreateActiveCart(user?.id, sessionId);
     } catch (error) {
@@ -46,8 +45,8 @@ export class CartController {
     @Body() addItemDto: AddItemDto,
     @CurrentUser() user: UserResponse | undefined,
     @GuestSession() sessionId: string | undefined,
-  ): Promise<void> {
-    await this.cartService.addItem(addItemDto, user?.id, sessionId);
+  ): Promise<CartResponse> {
+    return await this.cartService.addItem(addItemDto, user?.id, sessionId);
   }
 
   @Put('items/:itemId')
@@ -57,8 +56,8 @@ export class CartController {
     @Body() updateItemDto: AddItemDto,
     @CurrentUser() user: UserResponse | undefined,
     @GuestSession() sessionId: string | undefined,
-  ): Promise<void> {
-    await this.cartService.updateItem(
+  ): Promise<CartResponse> {
+    return await this.cartService.updateItem(
       itemId,
       updateItemDto,
       user?.id,
@@ -67,14 +66,14 @@ export class CartController {
   }
 
   @Delete('items/:itemId')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   async removeItem(
     @Param('itemId') itemId: number,
     @Req() req: Request,
     @CurrentUser() user: UserResponse | undefined,
     @GuestSession() sessionId: string | undefined,
-  ): Promise<void> {
-    await this.cartService.removeItem(itemId, user?.id, sessionId);
+  ): Promise<CartResponse> {
+    return await this.cartService.removeItem(itemId, user?.id, sessionId);
   }
 
   @Delete()

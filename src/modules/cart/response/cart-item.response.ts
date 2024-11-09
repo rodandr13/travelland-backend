@@ -3,6 +3,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { CartItemOptionResponse } from './cart-item-option.response';
 
 export type CartItemResponse = {
+  id: number;
   service_id: string;
   service_type: string;
   date: Date;

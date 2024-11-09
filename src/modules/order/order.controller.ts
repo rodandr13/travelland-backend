@@ -1,10 +1,10 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { Order } from '@prisma/client';
-import { Request } from 'express';
+import { Order, PaymentMethod } from '@prisma/client';
 
 import { CreateOrderDTO } from './dto/create-order.dto';
 import { OrderService } from './order.service';
+import { CreateOrderResponse } from './responses/create-order.response';
 import { CurrentUser } from '../auth/decorators/user.decorator';
 
 @Controller('order')
@@ -20,18 +20,19 @@ export class OrderController {
   @Post()
   async createOrder(
     @Body() createOrderDto: CreateOrderDTO,
-    @Req() req: Request,
-  ) {
-    console.log(req.cookies);
+  ): Promise<CreateOrderResponse> {
     const result = await this.orderService.createOrder(createOrderDto);
-    if (result.paymentUrl) {
+
+    if (result.method === PaymentMethod.CARD && result.url) {
       return {
-        success: true,
-        message: 'Payment successful',
-        redirect: result.paymentUrl,
+        payment_method: PaymentMethod.CARD,
+        redirect: result.url,
       };
-    } else {
-      return { message: 'Заказ создан без необходимости оплаты' };
+    } else if (result.method === PaymentMethod.CASH) {
+      return {
+        payment_method: PaymentMethod.CASH,
+        token: result.token,
+      };
     }
   }
 }

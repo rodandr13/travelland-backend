@@ -74,6 +74,7 @@ export const prepareCartItemOptions = ({
       quantity: option.quantity,
       category_title: option.category_title,
       category_description: option.category_description,
+      category_id: option.category_id,
       total_base_price: totalBasePrice,
       total_current_price: totalCurrentPrice,
       ...(cartItemId && { cart_item_id: cartItemId }),

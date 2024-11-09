@@ -27,6 +27,7 @@ export class CartService {
     total_current_price: true,
     cart_items: {
       select: {
+        id: true,
         service_id: true,
         service_type: true,
         date: true,
@@ -48,24 +49,24 @@ export class CartService {
     addItemDto: AddItemDto,
     userId?: number,
     sessionId?: string,
-  ): Promise<void> {
+  ): Promise<CartResponse> {
     try {
       const cart = await this.getOrCreateActiveCart(userId, sessionId);
 
       await this.prismaService.$transaction(async (tx) => {
         const { totalBasePrice, totalCurrentPrice } = calculateCartItemTotals(
-          addItemDto.cartItemOptions,
+          addItemDto.cart_item_options,
         );
 
         const preparedOptions = prepareCartItemOptions({
-          options: addItemDto.cartItemOptions,
+          options: addItemDto.cart_item_options,
         });
 
         await tx.cartItem.create({
           data: {
             cart_id: cart.id,
-            service_id: addItemDto.serviceId,
-            service_type: addItemDto.serviceType,
+            service_id: addItemDto.service_id,
+            service_type: addItemDto.service_type,
             date: addItemDto.date,
             time: addItemDto.time,
             slug: addItemDto.slug,
@@ -85,17 +86,44 @@ export class CartService {
           },
         });
 
+        const cartItems = await tx.cartItem.findMany({
+          where: { cart_id: cart.id },
+          include: { cart_item_options: true },
+        });
+
+        const cartTotals = cartItems.reduce(
+          (totals, item) => {
+            return {
+              totalBasePrice: totals.totalBasePrice.add(item.total_base_price),
+              totalCurrentPrice: totals.totalCurrentPrice.add(
+                item.total_current_price,
+              ),
+            };
+          },
+          {
+            totalBasePrice: new Prisma.Decimal(0),
+            totalCurrentPrice: new Prisma.Decimal(0),
+          },
+        );
+
         await tx.cart.update({
           where: { id: cart.id },
           data: {
-            total_base_price: {
-              increment: totalBasePrice,
-            },
-            total_current_price: {
-              increment: totalCurrentPrice,
-            },
+            total_base_price: cartTotals.totalBasePrice,
+            total_current_price: cartTotals.totalCurrentPrice,
           },
         });
+      });
+
+      return await this.prismaService.cart.findUnique({
+        where: { id: cart.id },
+        include: {
+          cart_items: {
+            include: {
+              cart_item_options: true,
+            },
+          },
+        },
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -112,17 +140,17 @@ export class CartService {
     updateItemDto: UpdateItemDto,
     userId?: number,
     sessionId?: string,
-  ): Promise<void> {
+  ): Promise<CartResponse> {
     try {
       const cart = await this.getOrCreateActiveCart(userId, sessionId);
 
       await this.prismaService.$transaction(async (tx) => {
         const { totalBasePrice, totalCurrentPrice } = calculateCartItemTotals(
-          updateItemDto.cartItemOptions,
+          updateItemDto.cart_item_options,
         );
 
         const preparedOptions = prepareCartItemOptions({
-          options: updateItemDto.cartItemOptions,
+          options: updateItemDto.cart_item_options,
           cartItemId,
         });
 
@@ -143,8 +171,8 @@ export class CartService {
         const duplicateItem = await tx.cartItem.findFirst({
           where: {
             cart_id: cart.id,
-            service_id: updateItemDto.serviceId,
-            service_type: updateItemDto.serviceType,
+            service_id: updateItemDto.service_id,
+            service_type: updateItemDto.service_type,
             date: updateItemDto.date,
             time: updateItemDto.time,
             NOT: {
@@ -162,8 +190,8 @@ export class CartService {
         await tx.cartItem.update({
           where: { id: cartItemId },
           data: {
-            service_id: updateItemDto.serviceId,
-            service_type: updateItemDto.serviceType,
+            service_id: updateItemDto.service_id,
+            service_type: updateItemDto.service_type,
             date: updateItemDto.date,
             time: updateItemDto.time,
             total_current_price: totalCurrentPrice,
@@ -181,22 +209,44 @@ export class CartService {
           data: preparedOptions,
         });
 
-        const priceDifference = {
-          base: totalBasePrice.sub(existingItem.total_base_price),
-          current: totalCurrentPrice.sub(existingItem.total_current_price),
-        };
+        const cartItems = await tx.cartItem.findMany({
+          where: { cart_id: cart.id },
+          include: { cart_item_options: true },
+        });
+
+        const cartTotals = cartItems.reduce(
+          (totals, item) => {
+            return {
+              totalBasePrice: totals.totalBasePrice.add(item.total_base_price),
+              totalCurrentPrice: totals.totalCurrentPrice.add(
+                item.total_current_price,
+              ),
+            };
+          },
+          {
+            totalBasePrice: new Prisma.Decimal(0),
+            totalCurrentPrice: new Prisma.Decimal(0),
+          },
+        );
 
         await tx.cart.update({
           where: { id: cart.id },
           data: {
-            total_base_price: {
-              increment: priceDifference.base,
-            },
-            total_current_price: {
-              increment: priceDifference.current,
-            },
+            total_base_price: cartTotals.totalBasePrice,
+            total_current_price: cartTotals.totalCurrentPrice,
           },
         });
+      });
+
+      return await this.prismaService.cart.findUnique({
+        where: { id: cart.id },
+        include: {
+          cart_items: {
+            include: {
+              cart_item_options: true,
+            },
+          },
+        },
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -229,10 +279,9 @@ export class CartService {
     itemId: number,
     userId?: number,
     sessionId?: string,
-  ): Promise<void> {
+  ): Promise<CartResponse> {
     const cart = await this.getOrCreateActiveCart(userId, sessionId);
-
-    await this.prismaService.$transaction(async (tx) => {
+    return this.prismaService.$transaction(async (tx) => {
       const cartItem = await tx.cartItem.findFirst({
         where: {
           id: itemId,
@@ -251,14 +300,37 @@ export class CartService {
         where: { id: cartItem.id },
       });
 
-      await tx.cart.update({
+      const cartItems = await tx.cartItem.findMany({
+        where: { cart_id: cart.id },
+        include: { cart_item_options: true },
+      });
+
+      const cartTotals = cartItems.reduce(
+        (totals, item) => {
+          return {
+            totalBasePrice: totals.totalBasePrice.add(item.total_base_price),
+            totalCurrentPrice: totals.totalCurrentPrice.add(
+              item.total_current_price,
+            ),
+          };
+        },
+        {
+          totalBasePrice: new Prisma.Decimal(0),
+          totalCurrentPrice: new Prisma.Decimal(0),
+        },
+      );
+
+      return tx.cart.update({
         where: { id: cart.id },
         data: {
-          total_base_price: {
-            decrement: cartItem.total_base_price,
-          },
-          total_current_price: {
-            decrement: cartItem.total_current_price,
+          total_base_price: cartTotals.totalBasePrice,
+          total_current_price: cartTotals.totalCurrentPrice,
+        },
+        include: {
+          cart_items: {
+            include: {
+              cart_item_options: true,
+            },
           },
         },
       });
