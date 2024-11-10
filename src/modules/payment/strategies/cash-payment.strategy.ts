@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { CartStatus, OrderStatus } from '@prisma/client';
 
-import { PaymentInterfaceStrategy } from './payment.interface.strategy';
+import { PaymentInitiateStrategy } from './payment.interface.strategy';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentDataDto } from '../dto/payment.dto';
 import { PaymentInitiateResponse, PaymentResponseParams } from '../types';
 
 @Injectable()
-export class CashPaymentStrategy implements PaymentInterfaceStrategy {
+export class CashPaymentStrategy implements PaymentInitiateStrategy {
   constructor(private readonly prismaService: PrismaService) {}
 
   async initiatePayment(
@@ -26,7 +26,6 @@ export class CashPaymentStrategy implements PaymentInterfaceStrategy {
       where: { id: paymentData.orderNumber },
       select: { cart_id: true },
     });
-    console.log(order?.cart_id);
 
     if (order?.cart_id) {
       await this.prismaService.cart.update({

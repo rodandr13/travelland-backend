@@ -1,16 +1,18 @@
 import { PaymentDataDto } from '../dto/payment.dto';
 import {
+  GpwebpayPaymentResultResponse,
   PaymentInitiateResponse,
   PaymentResponseParams,
-  PaymentResultResponse,
 } from '../types';
 
-export interface PaymentInterfaceStrategy {
+export interface PaymentInitiateStrategy {
   initiatePayment(
     paymentData: PaymentDataDto,
   ): Promise<PaymentInitiateResponse>;
+}
 
+export interface PaymentResultStrategy {
   processPaymentResult(
     params: PaymentResponseParams,
-  ): Promise<PaymentResultResponse>;
+  ): Promise<GpwebpayPaymentResultResponse>;
 }

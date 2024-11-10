@@ -49,6 +49,15 @@ export type PaymentResultResponse = {
   token: string;
 };
 
+export type GpwebpayPaymentResultResponse = {
+  isPaymentSuccess: boolean;
+  PRCODE: string;
+  SRCODE: string;
+  RESULTTEXT: string;
+  ORDERNUMBER: string;
+  MERORDERNUM: string;
+};
+
 export type PaymentInitiateResponse = {
   token?: string;
   url?: string;

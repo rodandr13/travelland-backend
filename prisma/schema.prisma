@@ -140,6 +140,7 @@ model Order {
   currency        Currency  @default(EUR)
   due_date        DateTime?
 
+  total_paid          Decimal @default(0) @db.Decimal(10, 2)
   total_base_price    Decimal @db.Decimal(10, 2)
   total_current_price Decimal @db.Decimal(10, 2)
 
@@ -345,6 +346,7 @@ enum RoleName {
 enum OrderStatus {
   CONFIRMED
   PROCESSING
+  PARTIALLY_PAID
   COMPLETED
   CANCELLED
   REFUNDED
@@ -359,13 +361,14 @@ enum NotificationStatus {
 enum PaymentStatus {
   UNPAID
   PAID
+  PARTIALLY_PAID
   REFUNDED
 }
 
 enum PaymentMethod {
   CASH
   CARD
-  INSTALLMENT_PAYMENT
+  PREPAYMENT
 }
 
 enum Currency {

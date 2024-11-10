@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CartStatus, OrderStatus, PaymentStatus } from '@prisma/client';
 
 import { PaymentDataDto } from './dto/payment.dto';
 import {
@@ -12,6 +11,7 @@ import {
 } from './gpwebpay.config';
 import {
   GPWebPayOperations,
+  GpwebpayPaymentResultResponse,
   PaymentParams,
   PaymentResponseParams,
   PaymentResponseWithoutDigest,
@@ -124,69 +124,23 @@ export class GpwebpayService {
     return values.join('|');
   }
 
-  async processPaymentResult(params: PaymentResponseParams) {
+  async processPaymentResult(
+    params: PaymentResponseParams,
+  ): Promise<GpwebpayPaymentResultResponse> {
     const isValid = this.verifyResponse(params);
     if (!isValid) {
       throw new Error('Invalid response signature');
     }
 
-    const { PRCODE, SRCODE, RESULTTEXT, ORDERNUMBER, MERORDERNUM } = params;
-    const isPaymentSuccess = PRCODE === '0' && SRCODE === '0';
-    const orderId = Number(MERORDERNUM);
-    const transactionId = Number(ORDERNUMBER);
-    const paymentStatus = isPaymentSuccess
-      ? PaymentStatus.PAID
-      : PaymentStatus.UNPAID;
+    const isPaymentSuccess = params.PRCODE === '0' && params.SRCODE === '0';
 
-    try {
-      await this.prismaService.$transaction(async (prisma) => {
-        // Обновляем платеж с результатами
-        await prisma.payment.update({
-          where: { transaction_id: transactionId },
-          data: {
-            prcode: PRCODE,
-            srcode: SRCODE,
-            status: paymentStatus,
-            result_text: RESULTTEXT,
-          },
-        });
-
-        // Если платеж успешен, обновляем заказ и корзину
-        if (isPaymentSuccess) {
-          // Обновляем заказ
-          await prisma.order.update({
-            where: { id: orderId },
-            data: {
-              paid_at: new Date(),
-              order_status: OrderStatus.CONFIRMED,
-            },
-          });
-
-          // Получаем cart_id из заказа
-          const order = await prisma.order.findUnique({
-            where: { id: orderId },
-            select: { cart_id: true },
-          });
-          // Если у заказа есть связанная корзина, обновляем её статус
-          if (order?.cart_id) {
-            await prisma.cart.update({
-              where: { id: order.cart_id },
-              data: {
-                status: CartStatus.ORDERED,
-              },
-            });
-          }
-        }
-      });
-
-      const { token } = await this.prismaService.payment.findUnique({
-        where: { transaction_id: transactionId },
-        select: { token: true },
-      });
-
-      return { token };
-    } catch (error) {
-      throw new Error(`Ошибка обработки платежа: ${error}`);
-    }
+    return {
+      isPaymentSuccess,
+      PRCODE: params.PRCODE,
+      SRCODE: params.SRCODE,
+      RESULTTEXT: params.RESULTTEXT,
+      ORDERNUMBER: params.ORDERNUMBER,
+      MERORDERNUM: params.MERORDERNUM,
+    };
   }
 }
