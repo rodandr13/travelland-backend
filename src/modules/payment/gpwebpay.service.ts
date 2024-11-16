@@ -17,7 +17,6 @@ import {
   PaymentResponseWithoutDigest,
 } from './types';
 import { GPWebPayUtils } from './utils/gpwebpay.utils';
-import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class GpwebpayService {
@@ -27,7 +26,6 @@ export class GpwebpayService {
   private readonly gpPassphrase: string;
 
   constructor(
-    private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
     @Inject('PRIVATE_KEY') private readonly privateKey: string,
     @Inject('PUBLIC_KEY') private readonly publicKey: string,

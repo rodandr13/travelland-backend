@@ -33,6 +33,11 @@ export class OrderController {
         payment_method: PaymentMethod.CASH,
         token: result.token,
       };
+    } else if (result.method === PaymentMethod.PREPAYMENT) {
+      return {
+        payment_method: PaymentMethod.PREPAYMENT,
+        redirect: result.url,
+      };
     }
   }
 }
