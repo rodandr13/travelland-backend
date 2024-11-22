@@ -68,7 +68,7 @@ export class CartController {
   @Delete('items/:itemId')
   @HttpCode(HttpStatus.OK)
   async removeItem(
-    @Param('itemId') itemId: number,
+    @Param('itemId') itemId: string,
     @Req() req: Request,
     @CurrentUser() user: UserResponse | undefined,
     @GuestSession() sessionId: string | undefined,

@@ -276,7 +276,7 @@ export class CartService {
   }
 
   async removeItem(
-    itemId: number,
+    itemId: string,
     userId?: number,
     sessionId?: string,
   ): Promise<CartResponse> {
@@ -284,7 +284,7 @@ export class CartService {
     return this.prismaService.$transaction(async (tx) => {
       const cartItem = await tx.cartItem.findFirst({
         where: {
-          id: itemId,
+          service_id: itemId,
           cart_id: cart.id,
         },
         include: {

@@ -39,7 +39,6 @@ export class PaymentService {
         .mul(0.2)
         .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
     }
-
     const payment = await this.createPaymentRecord(
       order,
       paymentAmount,
